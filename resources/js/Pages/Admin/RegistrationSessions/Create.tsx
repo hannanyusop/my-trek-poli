@@ -11,6 +11,7 @@ import {
 } from '@/Components/ui/popover';
 import { cn } from '@/lib/utils';
 import AppLayout from '@/Layouts/AppLayout';
+import toast, { Toaster } from 'react-hot-toast';
 
 interface Track {
     id: number;
@@ -57,19 +58,29 @@ export default function CreateRegistrationSession({ tracks }: CreateRegistration
     };
 
     const validateStep2 = (): boolean => {
-        return selectedTracks.length > 0;
+        return data.tracks && data.tracks.length > 0;
     };
 
     const handleNext = () => {
+        console.log('=== HANDLE NEXT DEBUG ===');
+        console.log('Current step:', currentStep);
+        console.log('Selected tracks (local):', selectedTracks);
+        console.log('Form tracks (data):', data.tracks);
+        console.log('ValidateStep2 result:', validateStep2());
+        console.log('=== END HANDLE NEXT DEBUG ===');
+        
         if (currentStep < 3) {
             // Validate current step before proceeding
             if (currentStep === 1 && !validateStep1()) {
+                console.log('Step 1 validation failed');
                 return;
             }
             if (currentStep === 2 && !validateStep2()) {
+                console.log('Step 2 validation failed');
                 return;
             }
             
+            console.log('Moving to step:', currentStep + 1);
             // Simply move to next step - we'll handle data compilation in handleSubmit
             setCurrentStep(currentStep + 1);
         }
@@ -82,26 +93,45 @@ export default function CreateRegistrationSession({ tracks }: CreateRegistration
     };
 
     const handleTrackToggle = (trackId: number) => {
+        console.log('=== TRACK TOGGLE DEBUG ===');
+        console.log('Track ID being toggled:', trackId);
+        console.log('Current selectedTracks before toggle:', selectedTracks);
+        console.log('Current data.tracks before toggle:', data.tracks);
+        
         setSelectedTracks(prev => {
             const updated = prev.includes(trackId) 
                 ? prev.filter(id => id !== trackId)
                 : [...prev, trackId];
             
+            console.log('Updated selectedTracks:', updated);
+            
+            // Update the Inertia form data with new track selection
+            setData('tracks', updated);
+            console.log('Called setData with tracks:', updated);
+            
             // Initialize classes for newly selected tracks
             if (!prev.includes(trackId)) {
-                setClasses(prevClasses => ({
-                    ...prevClasses,
-                    [trackId]: []
-                }));
+                setClasses(prevClasses => {
+                    const updatedClasses = {
+                        ...prevClasses,
+                        [trackId]: []
+                    };
+                    setData('classes', updatedClasses);
+                    console.log('Added classes for track:', trackId, 'Updated classes:', updatedClasses);
+                    return updatedClasses;
+                });
             } else {
                 // Remove classes for deselected tracks
                 setClasses(prevClasses => {
-                    const newClasses = { ...prevClasses };
-                    delete newClasses[trackId];
-                    return newClasses;
+                    const updatedClasses = { ...prevClasses };
+                    delete updatedClasses[trackId];
+                    setData('classes', updatedClasses);
+                    console.log('Removed classes for track:', trackId, 'Updated classes:', updatedClasses);
+                    return updatedClasses;
                 });
             }
             
+            console.log('=== END TRACK TOGGLE DEBUG ===');
             return updated;
         });
     };
@@ -113,50 +143,92 @@ export default function CreateRegistrationSession({ tracks }: CreateRegistration
             quota: 0
         };
         
-        setClasses(prev => ({
-            ...prev,
-            [trackId]: [...(prev[trackId] || []), newClass]
-        }));
+        setClasses(prev => {
+            const updated = {
+                ...prev,
+                [trackId]: [...(prev[trackId] || []), newClass]
+            };
+            // Sync with Inertia form data
+            setData('classes', updated);
+            return updated;
+        });
     };
 
     const updateClass = (trackId: number, classId: string, field: 'name' | 'quota', value: string | number) => {
-        setClasses(prev => ({
-            ...prev,
-            [trackId]: prev[trackId].map(cls => 
-                cls.id === classId ? { ...cls, [field]: value } : cls
-            )
-        }));
+        setClasses(prev => {
+            const updated = {
+                ...prev,
+                [trackId]: prev[trackId].map(cls => 
+                    cls.id === classId ? { ...cls, [field]: value } : cls
+                )
+            };
+            // Sync with Inertia form data
+            setData('classes', updated);
+            return updated;
+        });
     };
 
     const removeClass = (trackId: number, classId: string) => {
-        setClasses(prev => ({
-            ...prev,
-            [trackId]: prev[trackId].filter(cls => cls.id !== classId)
-        }));
+        setClasses(prev => {
+            const updated = {
+                ...prev,
+                [trackId]: prev[trackId].filter(cls => cls.id !== classId)
+            };
+            // Sync with Inertia form data
+            setData('classes', updated);
+            return updated;
+        });
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         
-        // Prepare the final form data with all the current state
-        const finalData = {
-            name: data.name,
-            description: data.description,
-            start_date: startDate ? format(startDate, 'yyyy-MM-dd\'T\'HH:mm') : '',
-            end_date: endDate ? format(endDate, 'yyyy-MM-dd\'T\'HH:mm') : '',
-            tracks: selectedTracks,
-            classes: classes
-        };
+        // Debug current state
+        console.log('=== FORM SUBMISSION DEBUG ===');
+        console.log('Form data:', data);
+        console.log('Start date state:', startDate);
+        console.log('End date state:', endDate);
+        console.log('Selected tracks state:', selectedTracks);
+        console.log('Classes state:', classes);
+        console.log('=== END DEBUG ===');
+        
+        // Validate that we have all required data before submitting
+        if (!data.name.trim()) {
+            toast.error('Please enter a session name');
+            return;
+        }
+        if (!data.start_date) {
+            toast.error('Please select a start date');
+            return;
+        }
+        if (!data.end_date) {
+            toast.error('Please select an end date');
+            return;
+        }
+        if (!data.tracks || data.tracks.length === 0) {
+            toast.error('Please select at least one track');
+            return;
+        }
+
+        // Debug log to see what data we're sending
+        console.log('Submitting form data:', data);
 
         post(route('admin.registration-sessions.store'), {
-            data: finalData,
             onSuccess: () => {
+                toast.success('Registration session created successfully!');
                 reset();
                 setCurrentStep(1);
                 setSelectedTracks([]);
                 setClasses({});
                 setStartDate(undefined);
                 setEndDate(undefined);
+            },
+            onError: (errors) => {
+                // Handle validation errors with react-hot-toast
+                Object.entries(errors).forEach(([field, message]) => {
+                    const errorMessage = Array.isArray(message) ? message[0] : message;
+                    toast.error(`${field}: ${errorMessage}`);
+                });
             }
         });
     };
@@ -164,6 +236,7 @@ export default function CreateRegistrationSession({ tracks }: CreateRegistration
     return (
         <AppLayout>
             <Head title="Create Registration Session" />
+            <Toaster position="top-right" />
             
             <div className="py-12">
                 <div className="mx-auto max-w-4xl sm:px-6 lg:px-8">
@@ -278,7 +351,14 @@ export default function CreateRegistrationSession({ tracks }: CreateRegistration
                                                         <Calendar
                                                             mode="single"
                                                             selected={startDate}
-                                                            onSelect={setStartDate}
+                                                            onSelect={(date) => {
+                                                                console.log('Start date selected:', date);
+                                                                setStartDate(date);
+                                                                if (date) {
+                                                                    const formattedDate = format(new Date(date.getFullYear(), date.getMonth(), date.getDate(), 9, 0, 0), 'yyyy-MM-dd HH:mm:ss');
+                                                                    setData('start_date', formattedDate);
+                                                                }
+                                                            }}
                                                             disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                                                         />
                                                     </PopoverContent>
@@ -307,7 +387,14 @@ export default function CreateRegistrationSession({ tracks }: CreateRegistration
                                                         <Calendar
                                                             mode="single"
                                                             selected={endDate}
-                                                            onSelect={setEndDate}
+                                                            onSelect={(date) => {
+                                                                console.log('End date selected:', date);
+                                                                setEndDate(date);
+                                                                if (date) {
+                                                                    const formattedDate = format(new Date(date.getFullYear(), date.getMonth(), date.getDate(), 17, 0, 0), 'yyyy-MM-dd HH:mm:ss');
+                                                                    setData('end_date', formattedDate);
+                                                                }
+                                                            }}
                                                             disabled={(date) => {
                                                                 const today = new Date(new Date().setHours(0, 0, 0, 0));
                                                                 const minDate = startDate || today;
@@ -479,18 +566,26 @@ export default function CreateRegistrationSession({ tracks }: CreateRegistration
                                     </Link>
 
                                     {currentStep < 3 ? (
-                                        <button
-                                            type="button"
-                                            onClick={handleNext}
-                                            disabled={
-                                                (currentStep === 1 && !validateStep1()) ||
-                                                (currentStep === 2 && !validateStep2())
-                                            }
-                                            className="flex items-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            Next
-                                            <ChevronRight className="w-4 h-4 ml-1" />
-                                        </button>
+                                        <div className="flex flex-col items-end gap-2">
+                                            {/* Debug info */}
+                                            {currentStep === 2 && (
+                                                <div className="text-xs text-gray-500">
+                                                    Debug: selectedTracks={selectedTracks.length}, data.tracks={data.tracks?.length || 0}, validation={validateStep2() ? 'PASS' : 'FAIL'}
+                                                </div>
+                                            )}
+                                            <button
+                                                type="button"
+                                                onClick={handleNext}
+                                                disabled={
+                                                    (currentStep === 1 && !validateStep1()) ||
+                                                    (currentStep === 2 && !validateStep2())
+                                                }
+                                                className="flex items-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                Next
+                                                <ChevronRight className="w-4 h-4 ml-1" />
+                                            </button>
+                                        </div>
                                     ) : (
                                         <button
                                             type="submit"

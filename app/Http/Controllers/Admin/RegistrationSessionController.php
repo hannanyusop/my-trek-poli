@@ -32,6 +32,9 @@ class RegistrationSessionController extends Controller
      */
     public function store(Request $request)
     {
+        // Debug: Log what we received
+        \Log::info('Registration session store request data:', $request->all());
+        
         $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -39,7 +42,7 @@ class RegistrationSessionController extends Controller
             'end_date' => 'required|date|after:start_date',
             'tracks' => 'required|array|min:1',
             'tracks.*' => 'exists:tracks,id',
-            'classes' => 'required|array',
+            'classes' => 'nullable|array', // Make classes nullable for now
         ]);
 
         // For now, just redirect back with success message
