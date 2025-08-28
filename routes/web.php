@@ -30,5 +30,27 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('Dashboard');
     })->name('dashboard');
 
-    Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
+    Route::get('/profile', function () {
+        return Inertia::render('Profile');
+    })->name('profile');
+
+    // Main Navigation Routes
+    Route::get('/semester-registration', function () {
+        return Inertia::render('SemesterRegistration');
+    })->name('semester-registration');
+
+    // Admin Routes
+    Route::prefix('admin')->name('admin.')->group(function () {
+        Route::get('/users', function () {
+            return Inertia::render('Admin/Users');
+        })->name('users');
+
+        Route::get('/tracks', function () {
+            return Inertia::render('Admin/Tracks');
+        })->name('tracks');
+
+        Route::get('/roles', function () {
+            return Inertia::render('Admin/Roles');
+        })->name('roles');
+    });
 });
