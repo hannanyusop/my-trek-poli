@@ -1,9 +1,9 @@
 <?php
 
+use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\RegisterController;
-use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -41,9 +41,7 @@ Route::middleware('auth')->group(function () {
 
     // Admin Routes
     Route::prefix('admin')->name('admin.')->group(function () {
-        Route::get('/users', function () {
-            return Inertia::render('Admin/Users');
-        })->name('users');
+        Route::resource('users', UserController::class);
 
         Route::get('/tracks', function () {
             return Inertia::render('Admin/Tracks');
