@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useForm } from '@inertiajs/react';
-import { X, Calendar, MapPin, BookOpen, Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Calendar as CalendarIcon, MapPin, BookOpen, Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { format } from 'date-fns';
+import { Calendar } from '@/Components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/Components/ui/popover';
+import { cn } from '@/lib/utils';
 
 interface Track {
     id: number;
@@ -31,19 +39,47 @@ export default function RegistrationSessionModal({ isOpen, onClose, tracks }: Re
         description: '',
         start_date: '',
         end_date: '',
-        status: 'pending',
         tracks: [] as number[],
         classes: {} as Record<number, ClassItem[]>
     });
 
+    const [startDate, setStartDate] = useState<Date | undefined>();
+    const [endDate, setEndDate] = useState<Date | undefined>();
+
     const steps = [
-        { number: 1, title: 'Registration Details', icon: Calendar },
+        { number: 1, title: 'Registration Details', icon: CalendarIcon },
         { number: 2, title: 'Select Tracks', icon: MapPin },
         { number: 3, title: 'Add Classes', icon: BookOpen }
     ];
 
+    // Validation function for step 1
+    const validateStep1 = (): boolean => {
+        return !!(data.name.trim() && startDate && endDate);
+    };
+
+    // Validation function for step 2
+    const validateStep2 = (): boolean => {
+        return selectedTracks.length > 0;
+    };
+
     const handleNext = () => {
         if (currentStep < 3) {
+            // Validate current step before proceeding
+            if (currentStep === 1 && !validateStep1()) {
+                return;
+            }
+            if (currentStep === 2 && !validateStep2()) {
+                return;
+            }
+            
+            if (currentStep === 1) {
+                // Update form data with selected dates
+                setData(prev => ({
+                    ...prev,
+                    start_date: startDate ? format(startDate, 'yyyy-MM-dd\'T\'HH:mm') : '',
+                    end_date: endDate ? format(endDate, 'yyyy-MM-dd\'T\'HH:mm') : ''
+                }));
+            }
             if (currentStep === 2) {
                 setData(prev => ({ ...prev, tracks: selectedTracks, classes: classes }));
             }
@@ -136,6 +172,8 @@ export default function RegistrationSessionModal({ isOpen, onClose, tracks }: Re
         setCurrentStep(1);
         setSelectedTracks([]);
         setClasses({});
+        setStartDate(undefined);
+        setEndDate(undefined);
         onClose();
     };
 
@@ -254,12 +292,29 @@ export default function RegistrationSessionModal({ isOpen, onClose, tracks }: Re
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                                             Start Date *
                                         </label>
-                                        <input
-                                            type="datetime-local"
-                                            value={data.start_date}
-                                            onChange={e => setData('start_date', e.target.value)}
-                                            className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                                        />
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <button
+                                                    type="button"
+                                                    className={cn(
+                                                        "mt-1 w-full flex items-center justify-start px-3 py-2 text-left border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500",
+                                                        !startDate && "text-gray-500 dark:text-gray-400"
+                                                    )}
+                                                >
+                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                    {startDate ? format(startDate, "PPP") : "Pick a start date"}
+                                                </button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0" align="start">
+                                                <Calendar
+                                                    mode="single"
+                                                    selected={startDate}
+                                                    onSelect={setStartDate}
+                                                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                                                    initialFocus
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
                                         {errors.start_date && <p className="mt-1 text-sm text-red-600">{errors.start_date}</p>}
                                     </div>
 
@@ -267,31 +322,37 @@ export default function RegistrationSessionModal({ isOpen, onClose, tracks }: Re
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                                             End Date *
                                         </label>
-                                        <input
-                                            type="datetime-local"
-                                            value={data.end_date}
-                                            onChange={e => setData('end_date', e.target.value)}
-                                            className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                                        />
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <button
+                                                    type="button"
+                                                    className={cn(
+                                                        "mt-1 w-full flex items-center justify-start px-3 py-2 text-left border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500",
+                                                        !endDate && "text-gray-500 dark:text-gray-400"
+                                                    )}
+                                                >
+                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                    {endDate ? format(endDate, "PPP") : "Pick an end date"}
+                                                </button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0" align="start">
+                                                <Calendar
+                                                    mode="single"
+                                                    selected={endDate}
+                                                    onSelect={setEndDate}
+                                                    disabled={(date) => {
+                                                        const today = new Date(new Date().setHours(0, 0, 0, 0));
+                                                        const minDate = startDate || today;
+                                                        return date < minDate;
+                                                    }}
+                                                    initialFocus
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
                                         {errors.end_date && <p className="mt-1 text-sm text-red-600">{errors.end_date}</p>}
                                     </div>
                                 </div>
 
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Status *
-                                    </label>
-                                    <select
-                                        value={data.status}
-                                        onChange={e => setData('status', e.target.value)}
-                                        className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                                    >
-                                        <option value="pending">Pending</option>
-                                        <option value="active">Active</option>
-                                        <option value="closed">Closed</option>
-                                    </select>
-                                    {errors.status && <p className="mt-1 text-sm text-red-600">{errors.status}</p>}
-                                </div>
                             </div>
                         )}
 
@@ -456,7 +517,10 @@ export default function RegistrationSessionModal({ isOpen, onClose, tracks }: Re
                                 <button
                                     type="button"
                                     onClick={handleNext}
-                                    disabled={currentStep === 2 && selectedTracks.length === 0}
+                                    disabled={
+                                        (currentStep === 1 && !validateStep1()) ||
+                                        (currentStep === 2 && !validateStep2())
+                                    }
                                     className="flex items-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     Next

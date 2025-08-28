@@ -1,7 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
-import { useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
-import RegistrationSessionModal from '@/Components/RegistrationSessionModal';
 import { Calendar, Users, BookOpen, Clock, MapPin, User, Plus } from 'lucide-react';
 
 interface RegistrationSession {
@@ -52,7 +50,6 @@ export default function SemesterRegistration({
     students = [],
     availableTracks = []
 }: Props) {
-    const [isModalOpen, setIsModalOpen] = useState(false);
     const getStatusColor = (status: string) => {
         switch (status.toLowerCase()) {
             case 'active':
@@ -85,13 +82,13 @@ export default function SemesterRegistration({
                                     </p>
                                 </div>
                                 
-                                <button
-                                    onClick={() => setIsModalOpen(true)}
+                                <Link
+                                    href={route('admin.registration-sessions.create')}
                                     className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
                                 >
                                     <Plus className="mr-2 h-4 w-4" />
                                     New Registration Session
-                                </button>
+                                </Link>
                             </div>
 
                             <div className="space-y-8">
@@ -359,12 +356,6 @@ export default function SemesterRegistration({
                 </div>
             </div>
 
-            {/* Registration Session Modal */}
-            <RegistrationSessionModal 
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                tracks={availableTracks.length > 0 ? availableTracks : tracks}
-            />
         </AppLayout>
     );
 }
