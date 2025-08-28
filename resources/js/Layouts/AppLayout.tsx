@@ -1,33 +1,34 @@
 import { PropsWithChildren } from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
+import Sidebar from '@/Components/Sidebar';
+
+interface User {
+    id: number;
+    name: string;
+    email: string;
+}
 
 export default function AppLayout({ 
     children, 
     title 
 }: PropsWithChildren<{ title?: string }>) {
+    const { auth } = usePage<{ auth?: { user: User } }>().props;
+    
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
             <Head title={title} />
             
-            <nav className="bg-white shadow">
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <div className="flex h-16 justify-between">
-                        <div className="flex">
-                            <div className="flex shrink-0 items-center">
-                                <h1 className="text-xl font-bold text-gray-900">
-                                    Laravel React
-                                </h1>
-                            </div>
-                        </div>
-                    </div>
+            <div className="flex h-screen">
+                {/* Sidebar */}
+                <Sidebar user={auth?.user} />
+                
+                {/* Main content */}
+                <div className="flex-1 flex flex-col overflow-hidden">
+                    <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 p-6">
+                        {children}
+                    </main>
                 </div>
-            </nav>
-
-            <main className="py-6">
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    {children}
-                </div>
-            </main>
+            </div>
         </div>
     );
 }

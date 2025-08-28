@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -26,10 +27,8 @@ Route::middleware('auth')->group(function () {
     Route::post('logout', [LoginController::class, 'destroy'])->name('logout');
 
     Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard', [
-            'auth' => [
-                'user' => auth()->user(),
-            ],
-        ]);
+        return Inertia::render('Dashboard');
     })->name('dashboard');
+
+    Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
 });

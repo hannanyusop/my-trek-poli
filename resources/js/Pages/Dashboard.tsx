@@ -1,4 +1,4 @@
-import { Link, router } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 
 interface User {
@@ -7,7 +7,8 @@ interface User {
     email: string;
 }
 
-export default function Dashboard({ auth }: { auth: { user: User } }) {
+export default function Dashboard() {
+    const { auth } = usePage<{ auth: { user: User } }>().props;
     const handleLogout = () => {
         router.post(route('logout'));
     };
