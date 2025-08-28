@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\RegisterController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -15,6 +16,10 @@ Route::middleware('guest')->group(function () {
     Route::post('login', [LoginController::class, 'store']);
     Route::get('register', [RegisterController::class, 'create'])->name('register');
     Route::post('register', [RegisterController::class, 'store']);
+
+    // Password Reset Routes
+    Route::get('forgot-password', [PasswordResetController::class, 'create'])->name('password.request');
+    Route::post('forgot-password', [PasswordResetController::class, 'store'])->name('password.email');
 });
 
 Route::middleware('auth')->group(function () {
@@ -28,8 +33,3 @@ Route::middleware('auth')->group(function () {
         ]);
     })->name('dashboard');
 });
-
-// Password Reset Routes (placeholder for future implementation)
-Route::get('forgot-password', function () {
-    return Inertia::render('Auth/ForgotPassword');
-})->middleware('guest')->name('password.request');
