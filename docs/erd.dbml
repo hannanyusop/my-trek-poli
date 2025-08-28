@@ -1,0 +1,130 @@
+// MyTrek Poli Database Schema
+// Generated from Laravel migrations
+
+Table registration_sessions {
+  id bigint [pk, increment]
+  name varchar [not null]
+  status enum('draft','open','closed','placement','published') [default: 'draft']
+  link_token varchar [unique, not null]
+  start_date timestamp
+  end_date timestamp
+  description text
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table registration_session_tracks {
+  id bigint [pk, increment]
+  registration_session_id bigint [ref: > registration_sessions.id, not null]
+  track_id bigint [ref: > tracks.id, not null]
+  name varchar [not null]
+  description text
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table classes {
+  id bigint [pk, increment]
+  registration_session_track_id bigint [ref: > registration_session_tracks.id, not null]
+  name varchar [not null]
+  quota integer [not null]
+  current_count integer [default: 0]
+  is_active boolean [default: true]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table users {
+  id bigint [pk, increment]
+  name varchar [not null]
+  email varchar [unique, not null]
+  email_verified_at timestamp
+  password varchar [not null]
+  remember_token varchar
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table tracks {
+  id bigint [pk, increment]
+  name varchar [not null]
+  description text
+  is_active boolean [default: true]
+  created_at timestamp
+  updated_at timestamp
+}
+
+
+Table students {
+  id bigint [pk, increment]
+  registration_session_id bigint [ref: > registration_sessions.id, not null]
+  matric_number varchar [not null]
+  identification_number varchar [not null]
+  name varchar [not null]
+  gender enum('male','female') [not null]
+  race varchar [not null]
+  religion varchar [not null]
+  email varchar
+  phone varchar
+  submitted_at timestamp
+  is_submitted boolean [default: false]
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    (registration_session_id, matric_number) [unique]
+    (registration_session_id, identification_number) [unique]
+  }
+}
+
+Table student_preferences {
+  id bigint [pk, increment]
+  student_id bigint [ref: > students.id, not null]
+  registration_session_track_id bigint [ref: > registration_session_tracks.id, null]
+  priority integer [not null, note: '1, 2, 3 for first, second, third choice']
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    (student_id, registration_session_track_id) [unique]
+    (student_id, priority) [unique]
+  }
+}
+
+Table placements {
+  id bigint [pk, increment]
+  student_id bigint [ref: > students.id, not null]
+  class_id bigint [ref: > classes.id, not null]
+  assigned_by enum('system','admin') [default: 'system']
+  admin_id bigint [ref: > users.id]
+  assigned_at timestamp [not null]
+  reason text [not null]
+  is_active boolean [default: true]
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    (student_id, is_active) [unique, note: 'Only one active placement per student']
+  }
+}
+
+Table placement_logs {
+  id bigint [pk, increment]
+  placement_id bigint [ref: > placements.id, not null]
+  student_id bigint [ref: > students.id, not null]
+  old_class_id bigint [ref: > classes.id]
+  new_class_id bigint [ref: > classes.id, not null]
+  changed_by bigint [ref: > users.id, not null]
+  changed_at timestamp [not null]
+  reason text [not null]
+  metadata json [note: 'Additional data like old/new quotas, etc.']
+  created_at timestamp
+  updated_at timestamp
+}
+
+// Notes about the system flow:
+// 1. Admin creates sessions with tracks and classes
+// 2. Students register through link/QR and submit preferences
+// 3. System or admin assigns students to classes based on preferences
+// 4. All placement changes are logged for audit trail
+// 5. Balance  considerations: gender, race distribution per class
