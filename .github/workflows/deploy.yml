@@ -3,7 +3,7 @@ name: Deploy to Server
 on:
   push:
     branches:
-      - feature/main
+      - feature/master
 
 jobs:
   deploy:
