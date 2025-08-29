@@ -63,7 +63,7 @@ Route::middleware('auth')->group(function () {
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('users', UserController::class);
         Route::resource('registration-sessions', RegistrationSessionController::class);
-        Route::get('registration-sessions/{registrationSession}/projector', [RegistrationSessionController::class, 'projector'])->name('registration-sessions.projector');
+        Route::get('registration-sessions/{registration_session}/projector', [RegistrationSessionController::class, 'projector'])->name('registration-sessions.projector');
         Route::post('registration-sessions/{registration_session}/undo-submission', [RegistrationSessionController::class, 'undoSubmission'])->name('registration-sessions.undo-submission');
         Route::get('registration-sessions/{registration_session}/export/excel', [RegistrationSessionController::class, 'exportExcel'])->name('registration-sessions.export.excel');
         Route::get('registration-sessions/{registration_session}/export/pdf', [RegistrationSessionController::class, 'exportPdf'])->name('registration-sessions.export.pdf');

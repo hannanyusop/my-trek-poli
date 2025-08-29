@@ -146,13 +146,14 @@ export default function BulkUpload({ session, previewData = [], errors = {}, sho
                                         <p className="text-gray-600 dark:text-gray-400 mb-4">
                                             Download the CSV template with pre-defined headers based on the students table structure.
                                         </p>
-                                        <Link
+                                        <a
                                             href={route('admin.registration-sessions.download-template', session.id)}
                                             className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors w-fit"
+                                            download
                                         >
                                             <Download className="mr-2 h-4 w-4" />
                                             Download CSV Template
-                                        </Link>
+                                        </a>
                                     </div>
 
                                     {/* File Upload */}
@@ -190,7 +191,7 @@ export default function BulkUpload({ session, previewData = [], errors = {}, sho
                                             <button
                                                 type="button"
                                                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                                                onClick={() => document.querySelector('input[type="file"]')?.click()}
+                                                onClick={() => (document.querySelector('input[type="file"]') as HTMLInputElement)?.click()}
                                             >
                                                 Choose File
                                             </button>
