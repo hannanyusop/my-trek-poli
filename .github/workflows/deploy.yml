@@ -8,44 +8,21 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: Developement
+    environment: Development
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup PHP
+      - name: Setup PHP (for Deployer CLI)
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, dom, filter, gd, iconv, json, mbstring, pdo
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
+      - name: Install Deployer
+        run: composer global require deployer/deployer
 
-      # Install Laravel dependencies
-      - name: Install PHP dependencies
-        run: composer install --optimize-autoloader --no-dev
-
-      # Install JS dependencies
-      - name: Install Node dependencies
-        run: npm ci
-
-      # Build frontend assets
-      - name: Build assets
-        run: npm run build
-
-      # Upload the built assets as artifact
-      - name: Upload build
-        uses: actions/upload-artifact@v4
-        with:
-          name: vite-build
-          path: public/build
-
-      # Deploy with SSH (runs Deployer on your server)
+      # Deploy with SSH (trigger deployer.yml on server)
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -54,5 +31,5 @@ jobs:
           key: ${{ secrets.PRIVATE_KEY }}
           port: 22
           script: |
-            cd /var/www/myTrek
-            /home/deployer/.config/composer/vendor/bin/dep deploy production -vvv
+            cd /var/www/myTrek/current
+            /home/deployer/.composer/vendor/bin/dep deploy staging -vvv
