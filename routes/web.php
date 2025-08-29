@@ -49,6 +49,7 @@ Route::middleware('auth')->group(function () {
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('users', UserController::class);
         Route::resource('registration-sessions', RegistrationSessionController::class);
+        Route::get('registration-sessions/{registrationSession}/projector', [RegistrationSessionController::class, 'projector'])->name('registration-sessions.projector');
         Route::resource('tracks', TrackController::class);
 
         Route::get('/roles', function () {

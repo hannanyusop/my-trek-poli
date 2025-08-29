@@ -81,6 +81,35 @@ class RegistrationSessionController extends Controller
     }
 
     /**
+     * Display the projector view for live registration tracking.
+     */
+    public function projector(string $id)
+    {
+        $session = RegistrationSession::findOrFail($id);
+
+        // Get classes with live counts
+        $classes = Classes::whereHas('registrationSessionTrack', function ($query) use ($session) {
+            $query->where('registration_session_id', $session->id);
+        })->get();
+
+        // Get total student count for this session
+        $totalStudents = Student::where('registration_session_id', $session->id)->count();
+        $submittedStudents = Student::where('registration_session_id', $session->id)
+            ->where('is_submitted', true)->count();
+
+        // Generate registration link
+        $registrationLink = url("/register/{$session->link_token}");
+
+        return Inertia::render('Admin/RegistrationSessions/Projector', [
+            'session' => $session,
+            'classes' => $classes,
+            'totalStudents' => $totalStudents,
+            'submittedStudents' => $submittedStudents,
+            'registrationLink' => $registrationLink,
+        ]);
+    }
+
+    /**
      * Show the form for editing the specified resource.
      */
     public function edit(string $id)

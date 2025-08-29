@@ -1,6 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
-import { Calendar, Users, BookOpen, Clock, ArrowLeft, QrCode, ExternalLink, User, Target } from 'lucide-react';
+import { Calendar, Users, BookOpen, Clock, ArrowLeft, QrCode, ExternalLink, User, Target, Monitor } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
 interface RegistrationSession {
@@ -83,9 +83,19 @@ export default function Show({ session, classes, students, registrationLink }: P
                                     </div>
                                 </div>
                                 
-                                <span className={`px-3 py-1 text-sm font-medium rounded-full ${getStatusColor(session.status)}`}>
-                                    {session.status}
-                                </span>
+                                <div className="flex items-center gap-3">
+                                    <Link
+                                        href={route('admin.registration-sessions.projector', session.id)}
+                                        target="_blank"
+                                        className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                    >
+                                        <Monitor className="mr-2 h-4 w-4" />
+                                        Projector View
+                                    </Link>
+                                    <span className={`px-3 py-1 text-sm font-medium rounded-full ${getStatusColor(session.status)}`}>
+                                        {session.status}
+                                    </span>
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
