@@ -8,51 +8,51 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: Developement 
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Setup PHP for Composer
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
           extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, dom, filter, gd, iconv, json, mbstring, pdo
 
-      # Setup Node for Vite
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
-      # Install backend dependencies
+      # Install Laravel dependencies
       - name: Install PHP dependencies
         run: composer install --optimize-autoloader --no-dev
 
-      # Install frontend dependencies
+      # Install JS dependencies
       - name: Install Node dependencies
         run: npm ci
 
-      # Build assets with Vite
+      # Build frontend assets
       - name: Build assets
         run: npm run build
 
-      # Upload build folder as artifact so we can send it to server
+      # Upload the built assets as artifact
       - name: Upload build
         uses: actions/upload-artifact@v4
         with:
           name: vite-build
           path: public/build
 
-      # Deploy using Deployer
-      - name: Deploy to server
+      # Deploy with SSH (runs Deployer on your server)
+      - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.PRIVATE_KEY }}
+          port: 22
           script: |
             cd /var/www/myTrek
             dep deploy production -vvv
