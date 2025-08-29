@@ -17,9 +17,25 @@ use Inertia\Response;
 
 class StudentRegistrationController extends Controller
 {
-    public function show(string $token): Response
+    public function show(Request $request, string $token): Response|RedirectResponse
     {
         $registrationSession = RegistrationSession::where('link_token', $token)->firstOrFail();
+
+        // Check if matric_number is provided in query parameters
+        $matricNumber = $request->query('matric_number');
+        if ($matricNumber) {
+            $submittedStudent = Student::where('registration_session_id', $registrationSession->id)
+                ->where('matric_number', $matricNumber)
+                ->where('is_submitted', true)
+                ->first();
+
+            if ($submittedStudent) {
+                return redirect()->route('student.registration.summary', [
+                    'token' => $token,
+                    'matric_number' => $matricNumber,
+                ]);
+            }
+        }
 
         return Inertia::render('StudentRegistration/Show', [
             'registrationSession' => $registrationSession,
@@ -42,7 +58,7 @@ class StudentRegistrationController extends Controller
         ]);
     }
 
-    public function lookupStudent(Request $request, string $token): Response
+    public function lookupStudent(Request $request, string $token): Response|RedirectResponse
     {
         $request->validate([
             'matric_number' => 'required|string|max:255',
@@ -55,9 +71,9 @@ class StudentRegistrationController extends Controller
             ->first();
 
         if ($student && $student->is_submitted) {
-            return Inertia::render('StudentRegistration/AlreadySubmitted', [
-                'student' => $student,
-                'registrationSession' => $registrationSession,
+            return redirect()->route('student.registration.summary', [
+                'token' => $token,
+                'matric_number' => $request->matric_number,
             ]);
         }
 
@@ -162,6 +178,38 @@ class StudentRegistrationController extends Controller
 
         return Inertia::render('StudentRegistration/Success', [
             'student' => $student->fresh(),
+            'registrationSession' => $registrationSession,
+            'preferences' => $preferences,
+            'placement' => $placement,
+        ]);
+    }
+
+    public function showSummary(string $token, string $matric_number): Response
+    {
+        $registrationSession = RegistrationSession::where('link_token', $token)->firstOrFail();
+
+        $student = Student::where('registration_session_id', $registrationSession->id)
+            ->where('matric_number', $matric_number)
+            ->where('is_submitted', true)
+            ->firstOrFail();
+
+        // Get student preferences with track information
+        $preferences = StudentPreference::where('student_id', $student->id)
+            ->with(['registrationSessionTrack.track'])
+            ->orderBy('priority')
+            ->get();
+
+        // Get student placement if available (only when session status is 'published')
+        $placement = null;
+        if ($registrationSession->status === 'published') {
+            $placement = \App\Models\Placement::where('student_id', $student->id)
+                ->where('is_active', true)
+                ->with(['class.registrationSessionTrack.track'])
+                ->first();
+        }
+
+        return Inertia::render('StudentRegistration/Success', [
+            'student' => $student,
             'registrationSession' => $registrationSession,
             'preferences' => $preferences,
             'placement' => $placement,

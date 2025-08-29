@@ -1,7 +1,7 @@
 <?php
 
-use App\Http\Controllers\Admin\RegistrationSessionController;
 use App\Http\Controllers\Admin\RaceController;
+use App\Http\Controllers\Admin\RegistrationSessionController;
 use App\Http\Controllers\Admin\ReligionController;
 use App\Http\Controllers\Admin\TrackController;
 use App\Http\Controllers\Admin\UserController;
@@ -24,6 +24,7 @@ Route::prefix('register')->name('student.registration.')->group(function () {
     Route::post('{token}/student', [StudentRegistrationController::class, 'storeStudent'])->name('store.student');
     Route::get('{token}/tracks', [StudentRegistrationController::class, 'showTrackSelection'])->name('tracks');
     Route::post('{token}/tracks', [StudentRegistrationController::class, 'storeTrackPreferences'])->name('store.tracks');
+    Route::get('{token}/summary/{matric_number}', [StudentRegistrationController::class, 'showSummary'])->name('summary');
 });
 
 // Authentication Routes
