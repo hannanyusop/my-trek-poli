@@ -7,6 +7,7 @@ interface RegistrationSession {
     link_token: string;
     start_date: string;
     end_date: string;
+    status: 'draft' | 'open' | 'closed' | 'placement' | 'published';
 }
 
 interface Student {
@@ -17,12 +18,43 @@ interface Student {
     submitted_at: string;
 }
 
+interface TrackPreference {
+    id: number;
+    priority: number;
+    registration_session_track: {
+        id: number;
+        track: {
+            id: number;
+            name: string;
+            description: string;
+        };
+    };
+}
+
+interface Placement {
+    id: number;
+    class: {
+        id: number;
+        name: string;
+        registration_session_track: {
+            track: {
+                id: number;
+                name: string;
+                description: string;
+            };
+        };
+    };
+    assigned_at: string;
+}
+
 interface Props {
     registrationSession: RegistrationSession;
     student: Student;
+    preferences: TrackPreference[];
+    placement: Placement | null;
 }
 
-export default function Success({ registrationSession, student }: Props) {
+export default function Success({ registrationSession, student, preferences, placement }: Props) {
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleString('en-MY', {
             year: 'numeric',
@@ -83,6 +115,90 @@ export default function Success({ registrationSession, student }: Props) {
                         </div>
                     </div>
 
+                    {/* Track Preferences */}
+                    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 mb-6">
+                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Your Track Preferences</h2>
+                        
+                        <div className="space-y-3">
+                            {preferences.map((preference) => (
+                                <div key={preference.id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-600 rounded-lg">
+                                    <div className="flex items-center space-x-3">
+                                        <span className="inline-flex items-center justify-center w-6 h-6 bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 text-sm font-semibold rounded-full">
+                                            {preference.priority}
+                                        </span>
+                                        <div>
+                                            <h3 className="font-medium text-gray-900 dark:text-white text-sm">
+                                                {preference.registration_session_track.track.name}
+                                            </h3>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                {preference.registration_session_track.track.description}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {preference.priority === 1 && (
+                                        <span className="px-2 py-1 text-xs font-medium text-green-700 bg-green-100 dark:bg-green-900/20 dark:text-green-400 rounded-full">
+                                            1st Choice
+                                        </span>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Assignment Result (only when published) */}
+                    {registrationSession.status === 'published' && (
+                        <div className="mb-6">
+                            {placement ? (
+                                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-6">
+                                    <div className="flex items-start">
+                                        <div className="flex-shrink-0">
+                                            <svg className="h-6 w-6 text-green-600 dark:text-green-400 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                        </div>
+                                        <div className="ml-3">
+                                            <h3 className="text-lg font-semibold text-green-800 dark:text-green-200 mb-2">Class Assignment</h3>
+                                            <div className="bg-white dark:bg-green-900/40 rounded-lg p-4">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <div>
+                                                        <h4 className="font-medium text-green-900 dark:text-green-100">
+                                                            {placement.class.registration_session_track.track.name}
+                                                        </h4>
+                                                        <p className="text-sm text-green-700 dark:text-green-300">
+                                                            Class: {placement.class.name}
+                                                        </p>
+                                                    </div>
+                                                    <span className="px-3 py-1 text-xs font-medium text-green-800 bg-green-200 dark:bg-green-800 dark:text-green-200 rounded-full">
+                                                        Assigned
+                                                    </span>
+                                                </div>
+                                                <p className="text-sm text-green-600 dark:text-green-400">
+                                                    Assigned on: {formatDate(placement.assigned_at)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6">
+                                    <div className="flex items-start">
+                                        <div className="flex-shrink-0">
+                                            <svg className="h-6 w-6 text-yellow-600 dark:text-yellow-400 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z" />
+                                            </svg>
+                                        </div>
+                                        <div className="ml-3">
+                                            <h3 className="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-2">No Assignment Yet</h3>
+                                            <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                                                Results have been published but you haven't been assigned to a class yet. Please contact the administration office for assistance.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {/* What's Next */}
                     <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6 mb-8">
                         <div className="flex items-start">
@@ -94,11 +210,35 @@ export default function Success({ registrationSession, student }: Props) {
                             <div className="ml-3 text-left">
                                 <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">What's Next?</h3>
                                 <div className="mt-2 text-sm text-blue-700 dark:text-blue-300">
-                                    <ul className="list-disc list-inside space-y-1">
-                                        <li>Your track preferences have been recorded</li>
-                                        <li>You will be notified about class placement</li>
-                                        <li>Check your email regularly for updates</li>
-                                    </ul>
+                                    {registrationSession.status === 'published' ? (
+                                        <ul className="list-disc list-inside space-y-1">
+                                            {placement ? (
+                                                <>
+                                                    <li>You have been assigned to your class</li>
+                                                    <li>Attend your assigned track sessions</li>
+                                                    <li>Check your email for further instructions</li>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <li>Results have been published</li>
+                                                    <li>Contact administration for assignment details</li>
+                                                    <li>Check back later or contact support</li>
+                                                </>
+                                            )}
+                                        </ul>
+                                    ) : registrationSession.status === 'placement' ? (
+                                        <ul className="list-disc list-inside space-y-1">
+                                            <li>Your preferences are being processed</li>
+                                            <li>Class placements are being finalized</li>
+                                            <li>Results will be available soon</li>
+                                        </ul>
+                                    ) : (
+                                        <ul className="list-disc list-inside space-y-1">
+                                            <li>Your track preferences have been recorded</li>
+                                            <li>You will be notified about class placement</li>
+                                            <li>Check your email regularly for updates</li>
+                                        </ul>
+                                    )}
                                 </div>
                             </div>
                         </div>

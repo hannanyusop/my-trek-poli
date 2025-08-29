@@ -85,8 +85,9 @@ class StudentRegistrationController extends Controller
             $request->validated()
         );
 
-        return redirect()->route('student.registration.tracks', $token)
-            ->with('student_id', $student->id);
+        session(['student_id' => $student->id]);
+
+        return redirect()->route('student.registration.tracks', $token);
     }
 
     public function showTrackSelection(string $token): Response
@@ -95,7 +96,9 @@ class StudentRegistrationController extends Controller
         $studentId = session('student_id');
 
         if (! $studentId) {
-            return redirect()->route('student.registration.show', $token);
+            return Inertia::render('StudentRegistration/Show', [
+                'registrationSession' => $registrationSession,
+            ]);
         }
 
         $student = Student::findOrFail($studentId);
@@ -120,7 +123,9 @@ class StudentRegistrationController extends Controller
         $studentId = session('student_id');
 
         if (! $studentId) {
-            return redirect()->route('student.registration.show', $token);
+            return Inertia::render('StudentRegistration/Show', [
+                'registrationSession' => $registrationSession,
+            ]);
         }
 
         $student = Student::findOrFail($studentId);
@@ -140,9 +145,26 @@ class StudentRegistrationController extends Controller
             'submitted_at' => now(),
         ]);
 
+        // Get student preferences with track information
+        $preferences = StudentPreference::where('student_id', $student->id)
+            ->with(['registrationSessionTrack.track'])
+            ->orderBy('priority')
+            ->get();
+
+        // Get student placement if available (only when session status is 'published')
+        $placement = null;
+        if ($registrationSession->status === 'published') {
+            $placement = \App\Models\Placement::where('student_id', $student->id)
+                ->where('is_active', true)
+                ->with(['class.registrationSessionTrack.track'])
+                ->first();
+        }
+
         return Inertia::render('StudentRegistration/Success', [
             'student' => $student->fresh(),
             'registrationSession' => $registrationSession,
+            'preferences' => $preferences,
+            'placement' => $placement,
         ]);
     }
 }
