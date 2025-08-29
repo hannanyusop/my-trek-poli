@@ -1,4 +1,4 @@
-import { FormEventHandler } from 'react';
+import { FormEventHandler, useEffect } from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import {
     Select,
@@ -9,57 +9,11 @@ import {
 } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import toast, { Toaster } from 'react-hot-toast';
+import { RegistrationSession, Student, Track, Race, Religion } from '@/types';
 
 declare global {
     function route(name?: string, params?: any, absolute?: boolean): string;
-}
-
-interface RegistrationSession {
-    id: number;
-    name: string;
-    description: string;
-    link_token: string;
-    start_date: string;
-    end_date: string;
-}
-
-interface Student {
-    id: number;
-    matric_number: string;
-    identification_number?: string;
-    name?: string;
-    gender?: 'male' | 'female';
-    race?: string;
-    religion?: string;
-    email?: string;
-    phone?: string;
-}
-
-interface Track {
-    id: number;
-    registration_session_id: number;
-    track_id: number;
-    name: string;
-    description: string;
-    track: {
-        id: number;
-        name: string;
-        description: string;
-    };
-}
-
-interface Race {
-    id: number;
-    name: string;
-    code: string;
-    is_active: boolean;
-}
-
-interface Religion {
-    id: number;
-    name: string;
-    code: string;
-    is_active: boolean;
 }
 
 interface Props {
@@ -82,6 +36,20 @@ export default function Form({ registrationSession, student, tracks, races, reli
         phone: student?.phone || '',
     });
 
+    // Show toast notifications for validation errors
+    useEffect(() => {
+        if (Object.keys(errors).length > 0) {
+            Object.entries(errors).forEach(([field, message]) => {
+                const errorMessage = Array.isArray(message) ? message[0] : message;
+                if (field === 'matric_number') {
+                    toast.error('Student lookup failed: ' + errorMessage);
+                } else {
+                    toast.error(`${field.replace('_', ' ')}: ${errorMessage}`);
+                }
+            });
+        }
+    }, [errors]);
+
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
         post(route('student.registration.store.student', registrationSession.link_token));
@@ -90,6 +58,7 @@ export default function Form({ registrationSession, student, tracks, races, reli
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 py-12 px-4 sm:px-6 lg:px-8">
             <Head title={`Student Information - ${registrationSession.name}`} />
+            <Toaster position="top-right" />
 
             <div className="max-w-2xl mx-auto">
                 <div className="bg-white dark:bg-gray-800 shadow-xl rounded-2xl px-8 py-10 border border-gray-100 dark:border-gray-700">
@@ -108,6 +77,7 @@ export default function Form({ registrationSession, student, tracks, races, reli
                     </div>
 
                     <form className="space-y-6" onSubmit={submit}>
+                        <input type="hidden" name="matric_number" value={data.matric_number} />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label htmlFor="matric_number" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -117,9 +87,9 @@ export default function Form({ registrationSession, student, tracks, races, reli
                                     id="matric_number"
                                     name="matric_number"
                                     type="text"
-                                    readOnly
                                     className="block w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white cursor-not-allowed"
                                     value={data.matric_number}
+                                    onChange={(e) => setData('matric_number', e.target.value)}
                                 />
                             </div>
 

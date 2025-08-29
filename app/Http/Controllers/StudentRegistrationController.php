@@ -76,8 +76,7 @@ class StudentRegistrationController extends Controller
 
     public function storeStudent(StudentRegistrationRequest $request, string $token): RedirectResponse
     {
-        $registrationSession = RegistrationSession::where('link_token', $token)->firstOrFail();
-
+        $registrationSession = RegistrationSession::where('link_token', $token)->first();
         $student = Student::updateOrCreate(
             [
                 'registration_session_id' => $registrationSession->id,
