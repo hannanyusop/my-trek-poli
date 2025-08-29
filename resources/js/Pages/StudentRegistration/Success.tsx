@@ -145,10 +145,11 @@ export default function Success({ registrationSession, student, preferences, pla
                         </div>
                     </div>
 
-                    {/* Assignment Result (only when published) */}
-                    {registrationSession.status === 'published' && (
-                        <div className="mb-6">
-                            {placement ? (
+                    {/* Results Status */}
+                    <div className="mb-6">
+                        {registrationSession.status === 'published' ? (
+                            /* Assignment Result (when published) */
+                            placement ? (
                                 <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-6">
                                     <div className="flex items-start">
                                         <div className="flex-shrink-0">
@@ -195,9 +196,39 @@ export default function Success({ registrationSession, student, preferences, pla
                                         </div>
                                     </div>
                                 </div>
-                            )}
-                        </div>
-                    )}
+                            )
+                        ) : (
+                            /* Results Still in Process */
+                            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+                                <div className="flex items-start">
+                                    <div className="flex-shrink-0">
+                                        <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-300 border-t-blue-600 dark:border-blue-700 dark:border-t-blue-400 mt-1"></div>
+                                    </div>
+                                    <div className="ml-3">
+                                        <h3 className="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-2">Results Still in Process</h3>
+                                        <div className="bg-white dark:bg-blue-900/40 rounded-lg p-4">
+                                            <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
+                                                Your registration has been successfully submitted and your preferences have been recorded. 
+                                                The results are currently being processed and class assignments are not yet finalized.
+                                            </p>
+                                            <div className="flex items-center space-x-2">
+                                                <div className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
+                                                    registrationSession.status === 'placement' 
+                                                        ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300'
+                                                        : 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
+                                                }`}>
+                                                    Status: {registrationSession.status.charAt(0).toUpperCase() + registrationSession.status.slice(1)}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <p className="text-sm text-blue-600 dark:text-blue-400 mt-3">
+                                            <span className="font-medium">Please check back later</span> or watch your email for updates on class assignments.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
 
                     {/* What's Next */}
                     <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6 mb-8">
