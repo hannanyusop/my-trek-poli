@@ -7,6 +7,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 
 declare global {
     function route(name?: string, params?: any, absolute?: boolean): string;
@@ -116,7 +118,7 @@ export default function Form({ registrationSession, student, tracks, races, reli
                                     name="matric_number"
                                     type="text"
                                     readOnly
-                                    className="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white cursor-not-allowed"
+                                    className="block w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white cursor-not-allowed"
                                     value={data.matric_number}
                                 />
                             </div>
@@ -130,7 +132,7 @@ export default function Form({ registrationSession, student, tracks, races, reli
                                     name="identification_number"
                                     type="text"
                                     required
-                                    className={`block w-full px-4 py-3 border rounded-lg transition-colors duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+                                    className={`block w-full px-4 py-2.5 border rounded-lg transition-colors duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
                                         errors.identification_number
                                             ? 'border-red-300 dark:border-red-600 focus:ring-red-500'
                                             : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
@@ -153,7 +155,7 @@ export default function Form({ registrationSession, student, tracks, races, reli
                                     name="name"
                                     type="text"
                                     required
-                                    className={`block w-full px-4 py-3 border rounded-lg transition-colors duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+                                    className={`block w-full px-4 py-3.5 border rounded-lg transition-colors duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
                                         errors.name
                                             ? 'border-red-300 dark:border-red-600 focus:ring-red-500'
                                             : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
@@ -168,22 +170,41 @@ export default function Form({ registrationSession, student, tracks, races, reli
                             </div>
 
                             <div>
-                                <label htmlFor="gender" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                                     Gender <span className="text-red-500">*</span>
                                 </label>
-                                <Select value={data.gender} onValueChange={(value) => setData('gender', value as 'male' | 'female' | '')}>
-                                    <SelectTrigger className={`w-full px-4 py-3 h-auto ${
-                                        errors.gender
-                                            ? 'border-red-300 dark:border-red-600 focus:ring-red-500'
-                                            : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
-                                    }`}>
-                                        <SelectValue placeholder="Select Gender" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="male">Male</SelectItem>
-                                        <SelectItem value="female">Female</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                                <RadioGroup
+                                    value={data.gender}
+                                    onValueChange={(value) => setData('gender', value as 'male' | 'female' | '')}
+                                    className="flex gap-6"
+                                >
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem
+                                            value="male"
+                                            id="male"
+                                            className={errors.gender ? 'border-red-300 dark:border-red-600' : ''}
+                                        />
+                                        <Label
+                                            htmlFor="male"
+                                            className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
+                                        >
+                                            Male
+                                        </Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem
+                                            value="female"
+                                            id="female"
+                                            className={errors.gender ? 'border-red-300 dark:border-red-600' : ''}
+                                        />
+                                        <Label
+                                            htmlFor="female"
+                                            className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
+                                        >
+                                            Female
+                                        </Label>
+                                    </div>
+                                </RadioGroup>
                                 {errors.gender && (
                                     <p className="mt-2 text-sm text-red-600 dark:text-red-400">{errors.gender}</p>
                                 )}
@@ -194,7 +215,7 @@ export default function Form({ registrationSession, student, tracks, races, reli
                                     Race <span className="text-red-500">*</span>
                                 </label>
                                 <Select value={data.race} onValueChange={(value) => setData('race', value)}>
-                                    <SelectTrigger className={`w-full px-4 py-3 h-auto ${
+                                    <SelectTrigger className={`w-full px-4 py-2.5 h-auto ${
                                         errors.race
                                             ? 'border-red-300 dark:border-red-600 focus:ring-red-500'
                                             : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
@@ -219,7 +240,7 @@ export default function Form({ registrationSession, student, tracks, races, reli
                                     Religion <span className="text-red-500">*</span>
                                 </label>
                                 <Select value={data.religion} onValueChange={(value) => setData('religion', value)}>
-                                    <SelectTrigger className={`w-full px-4 py-3 h-auto ${
+                                    <SelectTrigger className={`w-full px-4 py-3.5 h-auto ${
                                         errors.religion
                                             ? 'border-red-300 dark:border-red-600 focus:ring-red-500'
                                             : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
@@ -248,7 +269,7 @@ export default function Form({ registrationSession, student, tracks, races, reli
                                     name="email"
                                     type="email"
                                     required
-                                    className={`block w-full px-4 py-3 border rounded-lg transition-colors duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+                                    className={`block w-full px-4 py-2 border rounded-lg transition-colors duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
                                         errors.email
                                             ? 'border-red-300 dark:border-red-600 focus:ring-red-500'
                                             : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
@@ -271,7 +292,7 @@ export default function Form({ registrationSession, student, tracks, races, reli
                                     name="phone"
                                     type="tel"
                                     required
-                                    className={`block w-full px-4 py-3 border rounded-lg transition-colors duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+                                    className={`block w-full px-4 py-2.5 border rounded-lg transition-colors duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
                                         errors.phone
                                             ? 'border-red-300 dark:border-red-600 focus:ring-red-500'
                                             : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
