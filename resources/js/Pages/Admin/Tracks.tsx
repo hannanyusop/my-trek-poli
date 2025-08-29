@@ -1,6 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import { router } from '@inertiajs/react';
 import { toast } from 'react-toastify';
+import Swal from 'sweetalert2';
 import AppLayout from '@/Layouts/AppLayout';
 import { Settings, Plus, Search, Edit, Trash2, BookOpen } from 'lucide-react';
 
@@ -19,24 +20,36 @@ interface Props {
 
 export default function Tracks({ tracks = [] }: Props) {
     const handleDelete = (trackId: number, trackName: string) => {
-        if (confirm(`Are you sure you want to delete "${trackName}"? This action cannot be undone.`)) {
-            router.delete(route('admin.tracks.destroy', trackId), {
-                onSuccess: () => {
-                    // Success message will be handled by the backend flash message
-                },
-                onError: (errors) => {
-                    if (Object.keys(errors).length > 0) {
-                        Object.values(errors).forEach((error) => {
-                            if (typeof error === 'string') {
-                                toast.error(error);
-                            }
-                        });
-                    } else {
-                        toast.error('Failed to delete track. Please try again.');
+        Swal.fire({
+            title: 'Delete Track',
+            html: `Are you sure you want to delete <strong>"${trackName}"</strong>?<br><br>This action cannot be undone.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'Cancel',
+            focusCancel: true,
+        }).then((result) => {
+            if (result.isConfirmed) {
+                router.delete(route('admin.tracks.destroy', trackId), {
+                    onSuccess: () => {
+                        // Success message will be handled by the backend flash message
+                    },
+                    onError: (errors) => {
+                        if (Object.keys(errors).length > 0) {
+                            Object.values(errors).forEach((error) => {
+                                if (typeof error === 'string') {
+                                    toast.error(error);
+                                }
+                            });
+                        } else {
+                            toast.error('Failed to delete track. Please try again.');
+                        }
                     }
-                }
-            });
-        }
+                });
+            }
+        });
     };
     return (
         <AppLayout>
