@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests;
 
+use App\Models\RegistrationSession;
+use App\Models\RegistrationSessionTrack;
 use Illuminate\Foundation\Http\FormRequest;
 
 class TrackPreferencesRequest extends FormRequest
@@ -13,18 +15,28 @@ class TrackPreferencesRequest extends FormRequest
 
     public function rules(): array
     {
+        $registrationSession = RegistrationSession::where('link_token', $this->route('token'))->first();
+        $totalTracksCount = RegistrationSessionTrack::where('registration_session_id', $registrationSession->id)->count();
+
         return [
-            'preferences' => 'required|array|min:1',
+            'preferences' => [
+                'required',
+                'array',
+                "size:{$totalTracksCount}",
+            ],
             'preferences.*' => 'required|integer|exists:registration_session_tracks,id',
         ];
     }
 
     public function messages(): array
     {
+        $registrationSession = RegistrationSession::where('link_token', $this->route('token'))->first();
+        $totalTracksCount = RegistrationSessionTrack::where('registration_session_id', $registrationSession->id)->count();
+
         return [
-            'preferences.required' => 'You must select at least one track preference',
+            'preferences.required' => 'You must select all track preferences',
             'preferences.array' => 'Track preferences must be an array',
-            'preferences.min' => 'You must select at least one track preference',
+            'preferences.size' => "You must select all {$totalTracksCount} available tracks",
             'preferences.*.required' => 'Each track preference is required',
             'preferences.*.integer' => 'Each track preference must be a valid track ID',
             'preferences.*.exists' => 'Selected track does not exist',

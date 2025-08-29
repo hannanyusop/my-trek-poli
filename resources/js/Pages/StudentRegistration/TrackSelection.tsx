@@ -121,10 +121,15 @@ export default function TrackSelection({ registrationSession, student, tracks, e
         setData('preferences', newSelectedTracks.map(t => t.id));
     };
 
+    const handleSelectAllTracks = () => {
+        setSelectedTracks(tracks);
+        setData('preferences', tracks.map(t => t.id));
+    };
+
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
-        if (selectedTracks.length === 0) {
-            alert('Please select at least one track preference.');
+        if (selectedTracks.length !== tracks.length) {
+            alert(`Please select all ${tracks.length} tracks and prioritize them.`);
             return;
         }
         post(route('student.registration.store.tracks', registrationSession.link_token));
@@ -153,7 +158,7 @@ export default function TrackSelection({ registrationSession, student, tracks, e
                             Welcome {student.name}! Select and prioritize your track preferences.
                         </p>
                         <div className="text-sm text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-3">
-                            Drag and drop your selected tracks to prioritize them (1st choice at the top)
+                            You must select and prioritize ALL {tracks.length} tracks. Drag and drop to reorder them (1st choice at the top)
                         </div>
                     </div>
 
@@ -161,9 +166,20 @@ export default function TrackSelection({ registrationSession, student, tracks, e
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             {/* Available Tracks */}
                             <div>
-                                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                                    Available Tracks
-                                </h2>
+                                <div className="flex items-center justify-between mb-4">
+                                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                                        Available Tracks
+                                    </h2>
+                                    {availableTracks.length > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={handleSelectAllTracks}
+                                            className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors duration-200"
+                                        >
+                                            Select All
+                                        </button>
+                                    )}
+                                </div>
                                 <div className="space-y-3">
                                     {availableTracks.map((track) => (
                                         <div
@@ -190,9 +206,13 @@ export default function TrackSelection({ registrationSession, student, tracks, e
                                         </div>
                                     ))}
                                     {availableTracks.length === 0 && (
-                                        <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-                                            All tracks have been selected
-                                        </p>
+                                        <div className="text-center py-8 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                                            <svg className="mx-auto h-8 w-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                            </svg>
+                                            <p className="font-medium">All tracks selected!</p>
+                                            <p className="text-sm">Now prioritize them by dragging to reorder</p>
+                                        </div>
                                     )}
                                 </div>
                             </div>
@@ -201,8 +221,12 @@ export default function TrackSelection({ registrationSession, student, tracks, e
                             <div>
                                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
                                     Your Track Preferences
-                                    <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-2">
-                                        ({selectedTracks.length} selected)
+                                    <span className={`text-sm font-normal ml-2 ${
+                                        selectedTracks.length === tracks.length 
+                                            ? 'text-green-600 dark:text-green-400' 
+                                            : 'text-gray-500 dark:text-gray-400'
+                                    }`}>
+                                        ({selectedTracks.length}/{tracks.length} required)
                                     </span>
                                 </h2>
                                 <div className="space-y-3 min-h-[400px]">
@@ -246,10 +270,10 @@ export default function TrackSelection({ registrationSession, student, tracks, e
                                                                 e.stopPropagation();
                                                                 moveTrack(index, index - 1);
                                                             }}
-                                                            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                                            className="p-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-full transition-colors duration-200"
                                                             title="Move up"
                                                         >
-                                                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
                                                             </svg>
                                                         </button>
@@ -261,27 +285,14 @@ export default function TrackSelection({ registrationSession, student, tracks, e
                                                                 e.stopPropagation();
                                                                 moveTrack(index, index + 1);
                                                             }}
-                                                            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                                            className="p-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-full transition-colors duration-200"
                                                             title="Move down"
                                                         >
-                                                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                                             </svg>
                                                         </button>
                                                     )}
-                                                    <button
-                                                        type="button"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleTrackToggle(track);
-                                                        }}
-                                                        className="p-1 text-red-400 hover:text-red-600"
-                                                        title="Remove"
-                                                    >
-                                                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                        </svg>
-                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
@@ -292,7 +303,10 @@ export default function TrackSelection({ registrationSession, student, tracks, e
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                                             </svg>
                                             <p>No tracks selected yet</p>
-                                            <p className="text-sm">Click on tracks from the left to add them here</p>
+                                            <p className="text-sm">You must select all {tracks.length} tracks to proceed</p>
+                                            <p className="text-sm text-indigo-600 dark:text-indigo-400 mt-2">
+                                                Tip: Use the "Select All" button to add all tracks at once
+                                            </p>
                                         </div>
                                     )}
                                 </div>
@@ -313,9 +327,9 @@ export default function TrackSelection({ registrationSession, student, tracks, e
                         <div className="pt-8">
                             <button
                                 type="submit"
-                                disabled={processing || selectedTracks.length === 0}
+                                disabled={processing || selectedTracks.length !== tracks.length}
                                 className={`w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg text-sm font-semibold text-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
-                                    processing || selectedTracks.length === 0
+                                    processing || selectedTracks.length !== tracks.length
                                         ? 'bg-gray-400 dark:bg-gray-500 cursor-not-allowed'
                                         : 'bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-700 transform hover:scale-105 active:scale-95'
                                 }`}
