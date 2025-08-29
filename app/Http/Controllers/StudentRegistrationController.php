@@ -30,7 +30,7 @@ class StudentRegistrationController extends Controller
                 ->first();
 
             // If student doesn't exist, return error message
-            if (!$student) {
+            if (! $student) {
                 return Inertia::render('StudentRegistration/Show', [
                     'registrationSession' => $registrationSession,
                     'error' => 'Student not found. Please ask assistance from admin.',
@@ -54,7 +54,7 @@ class StudentRegistrationController extends Controller
         ]);
     }
 
-    public function showLookupForm(string $token): Response
+    public function showForm(string $token): Response
     {
         $registrationSession = RegistrationSession::where('link_token', $token)->firstOrFail();
         $tracks = RegistrationSessionTrack::where('registration_session_id', $registrationSession->id)->with('track')->get();
@@ -82,7 +82,7 @@ class StudentRegistrationController extends Controller
             ->where('registration_session_id', $registrationSession->id)
             ->first();
 
-        if (!$student) {
+        if (! $student) {
             return redirect()->back()->withErrors(['matric_number' => 'Student not found. Please ask assistance from admin.']);
         }
 
@@ -111,7 +111,7 @@ class StudentRegistrationController extends Controller
         $registrationSession = RegistrationSession::where('link_token', $token)->first();
         $validatedData = $request->validated();
         unset($validatedData['matric_number']);
-        
+
         $student = Student::updateOrCreate(
             [
                 'registration_session_id' => $registrationSession->id,
@@ -152,15 +152,13 @@ class StudentRegistrationController extends Controller
         ]);
     }
 
-    public function storeTrackPreferences(TrackPreferencesRequest $request, string $token): Response
+    public function storeTrackPreferences(TrackPreferencesRequest $request, string $token): RedirectResponse
     {
         $registrationSession = RegistrationSession::where('link_token', $token)->firstOrFail();
         $studentId = session('student_id');
 
         if (! $studentId) {
-            return Inertia::render('StudentRegistration/Show', [
-                'registrationSession' => $registrationSession,
-            ]);
+            return redirect()->route('student.registration.show', $token);
         }
 
         $student = Student::findOrFail($studentId);
@@ -174,6 +172,48 @@ class StudentRegistrationController extends Controller
                 'priority' => $priority + 1,
             ]);
         }
+
+        return redirect()->route('student.registration.preview', $token);
+    }
+
+    public function showPreview(string $token): Response
+    {
+        $registrationSession = RegistrationSession::where('link_token', $token)->firstOrFail();
+        $studentId = session('student_id');
+
+        if (! $studentId) {
+            return Inertia::render('StudentRegistration/Show', [
+                'registrationSession' => $registrationSession,
+            ]);
+        }
+
+        $student = Student::findOrFail($studentId);
+
+        // Get student preferences with track information
+        $preferences = StudentPreference::where('student_id', $student->id)
+            ->with(['registrationSessionTrack.track'])
+            ->orderBy('priority')
+            ->get();
+
+        return Inertia::render('StudentRegistration/Preview', [
+            'student' => $student,
+            'registrationSession' => $registrationSession,
+            'preferences' => $preferences,
+        ]);
+    }
+
+    public function submitRegistration(string $token): Response
+    {
+        $registrationSession = RegistrationSession::where('link_token', $token)->firstOrFail();
+        $studentId = session('student_id');
+
+        if (! $studentId) {
+            return Inertia::render('StudentRegistration/Show', [
+                'registrationSession' => $registrationSession,
+            ]);
+        }
+
+        $student = Student::findOrFail($studentId);
 
         $student->update([
             'is_submitted' => true,

@@ -19,11 +19,12 @@ Route::get('/', function () {
 // Student Registration Routes (public)
 Route::prefix('register')->name('student.registration.')->group(function () {
     Route::get('{token}', [StudentRegistrationController::class, 'show'])->name('show');
-    Route::get('{token}/lookup', [StudentRegistrationController::class, 'showLookupForm'])->name('lookup.form');
-    Route::post('{token}/lookup', [StudentRegistrationController::class, 'lookupStudent'])->name('lookup');
+    Route::get('{token}/form', [StudentRegistrationController::class, 'showForm'])->name('form');
     Route::post('{token}/student', [StudentRegistrationController::class, 'storeStudent'])->name('store.student');
     Route::get('{token}/tracks', [StudentRegistrationController::class, 'showTrackSelection'])->name('tracks');
     Route::post('{token}/tracks', [StudentRegistrationController::class, 'storeTrackPreferences'])->name('store.tracks');
+    Route::get('{token}/preview', [StudentRegistrationController::class, 'showPreview'])->name('preview');
+    Route::post('{token}/submit', [StudentRegistrationController::class, 'submitRegistration'])->name('submit');
     Route::get('{token}/summary/{matric_number}', [StudentRegistrationController::class, 'showSummary'])->name('summary');
 });
 

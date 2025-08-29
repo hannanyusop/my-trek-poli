@@ -136,9 +136,8 @@ test('track selection succeeds when all tracks are selected', function () {
         ],
     ]);
     
-    $response->assertOk();
+    $response->assertRedirect(route('student.registration.preview', $registrationSession->link_token));
     
-    // Verify student was marked as submitted
-    expect($student->fresh()->is_submitted)->toBeTrue();
-    expect($student->fresh()->submitted_at)->not->toBeNull();
+    // Student should not be submitted yet (only saved preferences)
+    expect($student->fresh()->is_submitted)->toBeFalse();
 });

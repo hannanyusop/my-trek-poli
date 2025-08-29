@@ -25,6 +25,7 @@ export default function Show({ registrationSession }: Props) {
 
     const storageKey = `student_data_${registrationSession.link_token}`;
 
+
     // Check localStorage on page load and redirect if student data exists
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -42,9 +43,9 @@ export default function Show({ registrationSession }: Props) {
                             registrationSession.link_token,
                             studentData.matric_number
                         ]));
-                    } else {
-                        // Redirect to form page
-                        router.visit(route('student.registration.lookup.form', registrationSession.link_token));
+                    } else if (studentData.matric_number) {
+                        // Redirect to form page if we have matric number
+                        router.visit(route('student.registration.form', registrationSession.link_token));
                     }
                 } catch (e) {
                     // Invalid data, clear it
@@ -56,7 +57,14 @@ export default function Show({ registrationSession }: Props) {
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
-        post(route('student.registration.lookup', registrationSession.link_token));
+        if (data.matric_number.trim()) {
+            // Store matric number and redirect to form
+            if (typeof window !== 'undefined') {
+                const studentData = { matric_number: data.matric_number.trim() };
+                localStorage.setItem(storageKey, JSON.stringify(studentData));
+            }
+            router.visit(route('student.registration.form', registrationSession.link_token));
+        }
     };
 
     return (
@@ -64,8 +72,8 @@ export default function Show({ registrationSession }: Props) {
             <Head title={`Student Registration - ${registrationSession.name}`} />
 
             <div className="max-w-lg w-full">
-                <div className="bg-white dark:bg-gray-800 shadow-xl rounded-2xl px-8 py-10 border border-gray-100 dark:border-gray-700">
-                    <div className="text-center mb-8">
+                    <div className="bg-white dark:bg-gray-800 shadow-xl rounded-2xl px-8 py-10 border border-gray-100 dark:border-gray-700">
+                        <div className="text-center mb-8">
                         <div className="mx-auto h-16 w-16 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mb-4">
                             <svg className="h-8 w-8 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
