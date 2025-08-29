@@ -180,13 +180,14 @@ export default function TrackSelection({ registrationSession, student, tracks, e
     );
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
             <Head title={`Track Selection - ${registrationSession.name}`} />
-
-            <div className="max-w-4xl mx-auto">
-                <StepIndicator currentStep={1} className="mb-12" />
-                
-                <div className="bg-white dark:bg-gray-800 shadow-xl rounded-2xl px-8 py-10 border border-gray-100 dark:border-gray-700">
+            
+            <div className="py-12 px-4 sm:px-6 lg:px-8">
+                <div className="max-w-4xl mx-auto">
+                    <StepIndicator currentStep={1} className="mb-12" />
+                    
+                    <div className="bg-white dark:bg-gray-800 shadow-xl rounded-2xl px-8 py-10 border border-gray-100 dark:border-gray-700">
                     <div className="text-center mb-8">
                         <div className="mx-auto h-16 w-16 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mb-4">
                             <svg className="h-8 w-8 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -443,6 +444,7 @@ export default function TrackSelection({ registrationSession, student, tracks, e
                             </button>
                         </div>
                     </form>
+                    </div>
                 </div>
             </div>
         </div>

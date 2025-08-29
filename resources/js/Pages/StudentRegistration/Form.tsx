@@ -183,9 +183,9 @@ export default function Form({ registrationSession, student, tracks, races, reli
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                             </svg>
                         </div>
-                        <div className="flex justify-between items-center mb-4">
+                        <div className="text-center mb-8">
                             <div className="flex-1"></div>
-                            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
                                 Student Information
                             </h1>
                         </div>
@@ -410,7 +410,7 @@ export default function Form({ registrationSession, student, tracks, races, reli
                                 onClick={handleLogout}
                                 className="px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
                             >
-                                Logout
+                                Clear Form
                             </button>
                             <button
                                 type="submit"
