@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Classes;
+use App\Models\RegistrationSession;
+use App\Models\Student;
 use App\Models\Track;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -34,7 +37,7 @@ class RegistrationSessionController extends Controller
     {
         // Debug: Log what we received
         \Log::info('Registration session store request data:', $request->all());
-        
+
         $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -55,7 +58,26 @@ class RegistrationSessionController extends Controller
      */
     public function show(string $id)
     {
-        //
+        $session = RegistrationSession::findOrFail($id);
+
+        // Get classes related to this registration session through registration_session_tracks
+        $classes = Classes::whereHas('registrationSessionTrack', function ($query) use ($session) {
+            $query->where('registration_session_id', $session->id);
+        })->get();
+
+        // Get students registered for this session
+        $students = Student::where('registration_session_id', $session->id)->get();
+
+        // Generate registration link - for now just use a placeholder route
+        // You can adjust this based on your actual student registration route
+        $registrationLink = url("/register/{$session->link_token}");
+
+        return Inertia::render('Admin/RegistrationSessions/Show', [
+            'session' => $session,
+            'classes' => $classes,
+            'students' => $students,
+            'registrationLink' => $registrationLink,
+        ]);
     }
 
     /**
