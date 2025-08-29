@@ -24,17 +24,29 @@ class StudentRegistrationController extends Controller
         // Check if matric_number is provided in query parameters
         $matricNumber = $request->query('matric_number');
         if ($matricNumber) {
-            $submittedStudent = Student::where('registration_session_id', $registrationSession->id)
-                ->where('matric_number', $matricNumber)
-                ->where('is_submitted', true)
+            // Check if student exists with the provided matric number and correct session ID
+            $student = Student::where('matric_number', $matricNumber)
+                ->where('registration_session_id', $registrationSession->id)
                 ->first();
 
-            if ($submittedStudent) {
+            // If student doesn't exist, return error message
+            if (!$student) {
+                return Inertia::render('StudentRegistration/Show', [
+                    'registrationSession' => $registrationSession,
+                    'error' => 'Student not found. Please ask assistance from admin.',
+                ]);
+            }
+
+            // If student exists and is submitted, redirect to summary
+            if ($student->is_submitted) {
                 return redirect()->route('student.registration.summary', [
                     'token' => $token,
                     'matric_number' => $matricNumber,
                 ]);
             }
+
+            // If student exists but not submitted, redirect to form with student data
+            return redirect()->route('student.registration.form', $token)->with('student_data', $student);
         }
 
         return Inertia::render('StudentRegistration/Show', [
@@ -66,11 +78,15 @@ class StudentRegistrationController extends Controller
 
         $registrationSession = RegistrationSession::where('link_token', $token)->firstOrFail();
 
-        $student = Student::where('registration_session_id', $registrationSession->id)
-            ->where('matric_number', $request->matric_number)
+        $student = Student::where('matric_number', $request->matric_number)
+            ->where('registration_session_id', $registrationSession->id)
             ->first();
 
-        if ($student && $student->is_submitted) {
+        if (!$student) {
+            return redirect()->back()->withErrors(['matric_number' => 'Student not found. Please ask assistance from admin.']);
+        }
+
+        if ($student->is_submitted) {
             return redirect()->route('student.registration.summary', [
                 'token' => $token,
                 'matric_number' => $request->matric_number,
