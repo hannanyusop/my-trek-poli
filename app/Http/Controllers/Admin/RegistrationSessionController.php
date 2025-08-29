@@ -353,7 +353,7 @@ class RegistrationSessionController extends Controller
     public function confirmUpload(Request $request, string $id)
     {
         $session = RegistrationSession::findOrFail($id);
-        $studentsData = $request->input('students_data');
+        $studentsData = $request->input('students_data', []);
 
         $createdCount = 0;
         $updatedCount = 0;

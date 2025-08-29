@@ -22,8 +22,8 @@ tasks:
   deploy:
     - deploy:prepare
     - deploy:vendors
-#    - npm:install
-#    - npm:build
+    - npm:install
+    - npm:build
     - artisan:storage:link
     - artisan:config:cache
     - artisan:route:cache
