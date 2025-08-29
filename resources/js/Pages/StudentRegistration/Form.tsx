@@ -6,9 +6,9 @@ import {
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
+} from '@/Components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/Components/ui/radio-group';
+import { Label } from '@/Components/ui/label';
 import toast, { Toaster } from 'react-hot-toast';
 import { RegistrationSession, Student, Track, Race, Religion } from '@/types';
 import StepIndicator from '@/Components/StepIndicator';

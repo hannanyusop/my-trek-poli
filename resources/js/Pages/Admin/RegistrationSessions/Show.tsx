@@ -27,8 +27,8 @@ export default function Show({ session, classes, students, registrationLink }: P
 
     return (
         <AppLayout>
-            <Head title={`Registration Session - ${session.name}`} />
-            
+            <Head title={`Registration Session  - ${session.name}`} />
+
             <div className="py-12">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
                     <div className="overflow-hidden bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg">
@@ -52,7 +52,7 @@ export default function Show({ session, classes, students, registrationLink }: P
                                         </p>
                                     </div>
                                 </div>
-                                
+
                                 <div className="flex items-center gap-3">
                                     <Link
                                         href={route('admin.registration-sessions.projector', session.id)}
@@ -77,7 +77,7 @@ export default function Show({ session, classes, students, registrationLink }: P
                                             <Calendar className="mr-2 h-5 w-5" />
                                             Session Information
                                         </h2>
-                                        
+
                                         <div className="space-y-4">
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -90,7 +90,7 @@ export default function Show({ session, classes, students, registrationLink }: P
                                                     </span>
                                                 </div>
                                             </div>
-                                            
+
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                                                     Description
@@ -108,16 +108,16 @@ export default function Show({ session, classes, students, registrationLink }: P
                                             <QrCode className="mr-2 h-5 w-5" />
                                             Registration QR Code
                                         </h2>
-                                        
+
                                         <div className="text-center">
                                             <div className="bg-white p-4 rounded-lg inline-block">
-                                                <QRCodeSVG 
+                                                <QRCodeSVG
                                                     value={registrationLink}
                                                     size={200}
                                                     level="M"
                                                 />
                                             </div>
-                                            
+
                                             <div className="mt-4">
                                                 <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
                                                     <code className="text-sm text-gray-600 dark:text-gray-300 truncate flex-1">
@@ -144,7 +144,7 @@ export default function Show({ session, classes, students, registrationLink }: P
                                             <BookOpen className="mr-2 h-5 w-5" />
                                             Available Classes
                                         </h2>
-                                        
+
                                         {classes.length > 0 ? (
                                             <div className="overflow-x-auto">
                                                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -171,7 +171,7 @@ export default function Show({ session, classes, students, registrationLink }: P
                                                         {classes.map((classItem) => {
                                                             const availableSlots = classItem.quota - classItem.current_count;
                                                             const isFullyBooked = availableSlots <= 0;
-                                                            
+
                                                             return (
                                                                 <tr key={classItem.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                                                                     <td className="px-6 py-4 whitespace-nowrap">
@@ -202,9 +202,9 @@ export default function Show({ session, classes, students, registrationLink }: P
                                                                     </td>
                                                                     <td className="px-6 py-4 whitespace-nowrap">
                                                                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                                                            isFullyBooked 
+                                                                            isFullyBooked
                                                                                 ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                                                                                : availableSlots <= 5 
+                                                                                : availableSlots <= 5
                                                                                     ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
                                                                                     : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                                                                         }`}>
@@ -232,7 +232,7 @@ export default function Show({ session, classes, students, registrationLink }: P
                                                 <User className="mr-2 h-5 w-5" />
                                                 Registered Students ({students.length})
                                             </h2>
-                                            
+
                                             <div className="flex items-center gap-2">
                                                 <Link
                                                     href={route('admin.registration-sessions.bulk-upload', session.id)}
@@ -261,7 +261,7 @@ export default function Show({ session, classes, students, registrationLink }: P
                                                 )}
                                             </div>
                                         </div>
-                                        
+
                                         {students.length > 0 ? (
                                             <div className="overflow-x-auto">
                                                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -307,7 +307,7 @@ export default function Show({ session, classes, students, registrationLink }: P
                                                                 </td>
                                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                                     <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                                                        student.is_submitted 
+                                                                        student.is_submitted
                                                                             ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                                                                             : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
                                                                     }`}>
@@ -316,7 +316,7 @@ export default function Show({ session, classes, students, registrationLink }: P
                                                                 </td>
                                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                                     <div className="text-sm text-gray-500 dark:text-gray-400">
-                                                                        {student.submitted_at 
+                                                                        {student.submitted_at
                                                                             ? new Date(student.submitted_at).toLocaleDateString()
                                                                             : '-'
                                                                         }
