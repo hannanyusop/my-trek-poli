@@ -2,50 +2,8 @@ import { Head, Link, router } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import { Calendar, Users, BookOpen, Clock, ArrowLeft, QrCode, ExternalLink, User, Target, Monitor, RotateCcw, FileSpreadsheet, FileText, Download, Upload } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-
-interface RegistrationSession {
-    id: number;
-    name: string;
-    status: string;
-    start_date: string;
-    end_date: string;
-    description: string;
-    link_token: string;
-}
-
-interface Track {
-    id: number;
-    name: string;
-    description: string;
-    is_active: boolean;
-}
-
-interface RegistrationSessionTrack {
-    id: number;
-    registration_session_id: number;
-    track_id: number;
-    name: string;
-    description: string;
-    track: Track;
-}
-
-interface Class {
-    id: number;
-    name: string;
-    quota: number;
-    current_count: number;
-    is_active: boolean;
-    registration_session_track: RegistrationSessionTrack;
-}
-
-interface Student {
-    id: number;
-    name: string;
-    matric_number: string;
-    email: string;
-    is_submitted: boolean;
-    submitted_at: string | null;
-}
+import { RegistrationSession, Student, Class } from '@/types';
+import { getStatusColor } from '@/lib/utils';
 
 interface Props {
     session: RegistrationSession;
@@ -55,19 +13,6 @@ interface Props {
 }
 
 export default function Show({ session, classes, students, registrationLink }: Props) {
-    const getStatusColor = (status: string) => {
-        switch (status.toLowerCase()) {
-            case 'active':
-                return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-            case 'pending':
-                return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
-            case 'closed':
-                return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
-            default:
-                return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
-        }
-    };
-
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text);
     };

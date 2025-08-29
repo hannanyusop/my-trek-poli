@@ -26,6 +26,16 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - Use descriptive names for variables and methods. For example, `isRegisteredForDiscounts`, not `discount()`.
 - Check for existing components to reuse before writing a new one.
 
+## TypeScript Interfaces & Types
+- All TypeScript interfaces and types should be defined in `resources/js/types/index.ts` for reusability across components.
+- Import types using `import { TypeName } from '@/types'` in components that need them.
+- Avoid duplicating interface definitions in individual component files.
+
+## Utility Functions
+- Reusable utility functions should be placed in `resources/js/lib/utils.ts`.
+- Use the existing `cn()` function for conditional Tailwind classes.
+- Import utilities using `import { functionName } from '@/lib/utils'`.
+
 ## Verification Scripts
 - Do not create verification scripts or tinker when tests cover that functionality and prove it works. Unit and feature tests are more important.
 
