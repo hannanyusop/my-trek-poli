@@ -403,7 +403,7 @@ class RegistrationSessionController extends Controller
 
         // Convert matric number to uppercase
         $request->merge([
-            'matric_number' => strtoupper($request->matric_number)
+            'matric_number' => strtoupper($request->matric_number),
         ]);
 
         $request->validate([
@@ -419,7 +419,7 @@ class RegistrationSessionController extends Controller
 
         // Create student with minimal data - just matric number
         // Generate a temporary unique identification number to satisfy the constraint
-        $tempIdNumber = 'TEMP_' . time() . '_' . rand(1000, 9999);
+        $tempIdNumber = 'TEMP_'.time().'_'.rand(1000, 9999);
 
         Student::create([
             'registration_session_id' => $session->id,
@@ -435,6 +435,37 @@ class RegistrationSessionController extends Controller
         ]);
 
         return back()->with('success', 'Student added successfully.');
+    }
+
+    /**
+     * Delete a student from the registration session (only if not submitted).
+     */
+    public function deleteStudent(Request $request, string $sessionId)
+    {
+        $request->validate([
+            'student_id' => 'required|exists:students,id',
+        ]);
+
+        $session = RegistrationSession::findOrFail($sessionId);
+
+        $student = Student::where('id', $request->student_id)
+            ->where('registration_session_id', $session->id)
+            ->firstOrFail();
+
+        // Only allow deletion if student hasn't submitted
+        if ($student->is_submitted) {
+            return back()->withErrors([
+                'student' => 'Cannot delete student who has already submitted their registration.',
+            ]);
+        }
+
+        // Delete student preferences first (if any)
+        \App\Models\StudentPreference::where('student_id', $student->id)->delete();
+
+        // Delete the student
+        $student->delete();
+
+        return back()->with('success', 'Student deleted successfully.');
     }
 
     /**

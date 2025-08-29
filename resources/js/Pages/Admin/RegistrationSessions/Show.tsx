@@ -1,11 +1,12 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
-import { Calendar, Users, BookOpen, Clock, ArrowLeft, QrCode, ExternalLink, User, Target, Monitor, RotateCcw, FileSpreadsheet, FileText, Upload, UserPlus } from 'lucide-react';
+import { Calendar, Users, BookOpen, Clock, ArrowLeft, QrCode, ExternalLink, User, Target, Monitor, RotateCcw, FileSpreadsheet, FileText, Upload, UserPlus, Trash2, ChevronDown, MoreVertical } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { RegistrationSession, Student, Class } from '@/types';
 import { getStatusColor } from '@/lib/utils';
 import AddSingleStudentModal from '@/Components/AddSingleStudentModal';
+import Swal from 'sweetalert2';
 
 interface Props {
     session: RegistrationSession;
@@ -16,17 +17,96 @@ interface Props {
 
 export default function Show({ session, classes, students, registrationLink }: Props) {
     const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
+    const [isActionsDropdownOpen, setIsActionsDropdownOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsActionsDropdownOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
     
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text);
     };
 
     const handleUndoSubmission = (studentId: number, studentName: string) => {
-        if (confirm(`Are you sure you want to undo the submission for ${studentName}? This will reset their submission status to pending.`)) {
-            router.post(route('admin.registration-sessions.undo-submission', session.id), {
-                student_id: studentId,
-            });
-        }
+        Swal.fire({
+            title: 'Undo Submission?',
+            text: `Are you sure you want to undo the submission for ${studentName}? This will reset their status to pending.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#f59e0b',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Yes, undo',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                router.post(route('admin.registration-sessions.undo-submission', session.id), {
+                    student_id: studentId,
+                }, {
+                    onSuccess: () => {
+                        Swal.fire({
+                            title: 'Undone!',
+                            text: 'Student submission has been reset to pending.',
+                            icon: 'success',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                    },
+                    onError: () => {
+                        Swal.fire({
+                            title: 'Error!',
+                            text: 'Failed to undo submission. Please try again.',
+                            icon: 'error'
+                        });
+                    }
+                });
+            }
+        });
+    };
+
+    const handleDeleteStudent = (studentId: number, studentName: string) => {
+        Swal.fire({
+            title: 'Delete Student?',
+            text: `Are you sure you want to delete ${studentName}? This action cannot be undone.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Yes, delete',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                router.delete(route('admin.registration-sessions.delete-student', session.id), {
+                    data: { student_id: studentId },
+                    onSuccess: () => {
+                        Swal.fire({
+                            title: 'Deleted!',
+                            text: 'Student has been deleted successfully.',
+                            icon: 'success',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                    },
+                    onError: () => {
+                        Swal.fire({
+                            title: 'Error!',
+                            text: 'Failed to delete student. Please try again.',
+                            icon: 'error'
+                        });
+                    }
+                });
+            }
+        });
     };
 
     return (
@@ -245,31 +325,53 @@ export default function Show({ session, classes, students, registrationLink }: P
                                                     <UserPlus className="mr-2 h-4 w-4" />
                                                     Add Student
                                                 </button>
-                                                <Link
-                                                    href={route('admin.registration-sessions.bulk-upload', session.id)}
-                                                    className="flex items-center px-3 py-2 text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
-                                                >
-                                                    <Upload className="mr-2 h-4 w-4" />
-                                                    Bulk Upload
-                                                </Link>
-                                                {students.length > 0 && (
-                                                    <>
-                                                        <Link
-                                                            href={route('admin.registration-sessions.export.excel', session.id)}
-                                                            className="flex items-center px-3 py-2 text-sm font-medium text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900 rounded-md hover:bg-green-200 dark:hover:bg-green-800 transition-colors"
-                                                        >
-                                                            <FileSpreadsheet className="mr-2 h-4 w-4" />
-                                                            Export Excel
-                                                        </Link>
-                                                        <Link
-                                                            href={route('admin.registration-sessions.export.pdf', session.id)}
-                                                            className="flex items-center px-3 py-2 text-sm font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900 rounded-md hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
-                                                        >
-                                                            <FileText className="mr-2 h-4 w-4" />
-                                                            Export PDF
-                                                        </Link>
-                                                    </>
-                                                )}
+                                                
+                                                <div className="relative" ref={dropdownRef}>
+                                                    <button
+                                                        onClick={() => setIsActionsDropdownOpen(!isActionsDropdownOpen)}
+                                                        className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+                                                    >
+                                                        <MoreVertical className="mr-2 h-4 w-4" />
+                                                        Actions
+                                                        <ChevronDown className="ml-1 h-4 w-4" />
+                                                    </button>
+
+                                                    {isActionsDropdownOpen && (
+                                                        <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-10">
+                                                            <div className="py-1">
+                                                                <Link
+                                                                    href={route('admin.registration-sessions.bulk-upload', session.id)}
+                                                                    className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                                                    onClick={() => setIsActionsDropdownOpen(false)}
+                                                                >
+                                                                    <Upload className="mr-3 h-4 w-4 text-blue-500" />
+                                                                    Bulk Upload
+                                                                </Link>
+                                                                
+                                                                {students.length > 0 && (
+                                                                    <>
+                                                                        <Link
+                                                                            href={route('admin.registration-sessions.export.excel', session.id)}
+                                                                            className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                                                            onClick={() => setIsActionsDropdownOpen(false)}
+                                                                        >
+                                                                            <FileSpreadsheet className="mr-3 h-4 w-4 text-green-500" />
+                                                                            Export Excel
+                                                                        </Link>
+                                                                        <Link
+                                                                            href={route('admin.registration-sessions.export.pdf', session.id)}
+                                                                            className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                                                            onClick={() => setIsActionsDropdownOpen(false)}
+                                                                        >
+                                                                            <FileText className="mr-3 h-4 w-4 text-red-500" />
+                                                                            Export PDF
+                                                                        </Link>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
 
@@ -334,16 +436,27 @@ export default function Show({ session, classes, students, registrationLink }: P
                                                                     </div>
                                                                 </td>
                                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                                    {student.is_submitted && (
-                                                                        <button
-                                                                            onClick={() => handleUndoSubmission(student.id, student.name)}
-                                                                            className="flex items-center px-3 py-1 text-sm font-medium text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-900 rounded-md hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors"
-                                                                            title="Undo submission"
-                                                                        >
-                                                                            <RotateCcw className="mr-1 h-3 w-3" />
-                                                                            Undo
-                                                                        </button>
-                                                                    )}
+                                                                    <div className="flex items-center gap-2">
+                                                                        {student.is_submitted ? (
+                                                                            <button
+                                                                                onClick={() => handleUndoSubmission(student.id, student.name)}
+                                                                                className="flex items-center px-3 py-1 text-sm font-medium text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-900 rounded-md hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors"
+                                                                                title="Undo submission"
+                                                                            >
+                                                                                <RotateCcw className="mr-1 h-3 w-3" />
+                                                                                Undo
+                                                                            </button>
+                                                                        ) : (
+                                                                            <button
+                                                                                onClick={() => handleDeleteStudent(student.id, student.name)}
+                                                                                className="flex items-center px-3 py-1 text-sm font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900 rounded-md hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
+                                                                                title="Delete student"
+                                                                            >
+                                                                                <Trash2 className="mr-1 h-3 w-3" />
+                                                                                Delete
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
                                                                 </td>
                                                             </tr>
                                                         ))}
