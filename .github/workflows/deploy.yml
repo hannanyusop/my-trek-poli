@@ -1,0 +1,56 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - feature/main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, dom, filter, gd, iconv, json, mbstring, pdo
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install PHP dependencies
+        run: composer install --optimize-autoloader --no-dev
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Build assets
+        run: npm run build
+
+      - name: Run tests
+        run: php artisan test
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy with Deployer
+        run: |
+          # Replace placeholders in deploy.php with actual values
+          sed -i "s/{{ secrets.HOST }}/${{ secrets.HOST }}/g" deploy.php
+          sed -i "s/{{ secrets.USERNAME }}/${{ secrets.USERNAME }}/g" deploy.php
+          sed -i "s/{{ secrets.DEPLOY_PATH }}/${{ secrets.DEPLOY_PATH }}/g" deploy.php
+          sed -i "s|git@github.com:your-username/my-trek-poli.git|${{ github.server_url }}/${{ github.repository }}.git|g" deploy.php
+          
+          # Deploy using Deployer
+          php vendor/bin/dep deploy production --ssh="ssh -i ~/.ssh/deploy_key"

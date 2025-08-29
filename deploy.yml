@@ -1,0 +1,38 @@
+import:
+  - recipe/laravel.php
+  - contrib/php-fpm.php
+  - contrib/npm.php
+
+config:
+  application: 'Keje Staging'
+  repository: 'git@github.com:DevstackTeam/keje-hrm.git'
+  php_fpm_version: '8.1'
+  ssh_multiplexing: false
+  http_user: 'caddy'
+hosts:
+  staging:
+    keep_releases: 2
+    repository: 'git@github.com:hannanyusop/my-trek-poli.git'
+    remote_user: 'deployer'
+    hostname: '34.124.242.89'
+    port: '22'
+    deploy_path: '/var/www/myTrek'
+    branch: 'feature/main'
+tasks:
+  deploy:
+    - deploy:prepare
+    - deploy:vendors
+#    - npm:install
+#    - npm:build
+    - artisan:storage:link
+    - artisan:config:cache
+    - artisan:route:cache
+    - artisan:view:cache
+    - deploy:publish
+  npm:build:
+      - run: cd {{release_path}} && npm run build
+  migrate:
+    - artisan:migrate
+
+after:
+  deploy:failed: deploy:unlock
