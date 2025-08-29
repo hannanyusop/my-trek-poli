@@ -73,3 +73,26 @@ export interface Class {
     is_active: boolean;
     registration_session_track: RegistrationSessionTrack;
 }
+
+export interface User {
+    id: number;
+    name: string;
+    email: string;
+}
+
+export interface DashboardStats {
+    total_users: number;
+    total_students: number;
+    total_tracks: number;
+    active_sessions: number;
+    total_registrations: number;
+}
+
+export interface StudentWithRelations extends Student {
+    race?: Race;
+    religion?: Religion;
+}
+
+export interface RegistrationSessionWithTracks extends RegistrationSession {
+    tracks: RegistrationSessionTrack[];
+}

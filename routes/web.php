@@ -9,6 +9,9 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\StudentRegistrationController;
+use App\Models\Student;
+use App\Models\Track;
+use App\Models\User;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -48,7 +51,23 @@ Route::middleware('auth')->group(function () {
     Route::post('logout', [LoginController::class, 'destroy'])->name('logout');
 
     Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard');
+        return Inertia::render('Dashboard', [
+            'stats' => [
+                'total_users' => User::count(),
+                'total_students' => Student::count(),
+                'total_tracks' => Track::count(),
+                'active_sessions' => \App\Models\RegistrationSession::where('status', 'active')->count(),
+                'total_registrations' => \App\Models\Student::whereNotNull('submitted_at')->count(),
+            ],
+            'recent_sessions' => \App\Models\RegistrationSession::with('tracks')
+                ->latest()
+                ->take(5)
+                ->get(),
+            'recent_registrations' => \App\Models\Student::whereNotNull('submitted_at')
+                ->latest('submitted_at')
+                ->take(10)
+                ->get(),
+        ]);
     })->name('dashboard');
 
     Route::get('/profile', function () {
