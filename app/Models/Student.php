@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Student extends Model
 {
@@ -32,5 +33,10 @@ class Student extends Model
     public function registrationSession(): BelongsTo
     {
         return $this->belongsTo(RegistrationSession::class);
+    }
+
+    public function preferences(): HasMany
+    {
+        return $this->hasMany(StudentPreference::class);
     }
 }

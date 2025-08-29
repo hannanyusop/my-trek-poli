@@ -6,11 +6,21 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\StudentRegistrationController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/', function () {
     return Inertia::render('Welcome');
+});
+
+// Student Registration Routes (public)
+Route::prefix('register')->name('student.registration.')->group(function () {
+    Route::get('{token}', [StudentRegistrationController::class, 'show'])->name('show');
+    Route::post('{token}/lookup', [StudentRegistrationController::class, 'lookupStudent'])->name('lookup');
+    Route::post('{token}/student', [StudentRegistrationController::class, 'storeStudent'])->name('store.student');
+    Route::get('{token}/tracks', [StudentRegistrationController::class, 'showTrackSelection'])->name('tracks');
+    Route::post('{token}/tracks', [StudentRegistrationController::class, 'storeTrackPreferences'])->name('store.tracks');
 });
 
 // Authentication Routes

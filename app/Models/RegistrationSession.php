@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\RegistrationSessionStatus;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class RegistrationSession extends Model
 {
@@ -23,5 +24,15 @@ class RegistrationSession extends Model
             'start_date' => 'datetime',
             'end_date' => 'datetime',
         ];
+    }
+
+    public function tracks(): HasMany
+    {
+        return $this->hasMany(RegistrationSessionTrack::class);
+    }
+
+    public function students(): HasMany
+    {
+        return $this->hasMany(Student::class);
     }
 }
