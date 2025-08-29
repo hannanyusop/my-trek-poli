@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exports\StudentsExport;
 use App\Http\Controllers\Controller;
 use App\Models\Classes;
 use App\Models\RegistrationSession;
@@ -9,6 +10,7 @@ use App\Models\Student;
 use App\Models\Track;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Maatwebsite\Excel\Facades\Excel;
 
 class RegistrationSessionController extends Controller
 {
@@ -125,6 +127,237 @@ class RegistrationSessionController extends Controller
     public function update(Request $request, string $id)
     {
         //
+    }
+
+    /**
+     * Undo submission status for a student.
+     */
+    public function undoSubmission(Request $request, string $sessionId)
+    {
+        $request->validate([
+            'student_id' => 'required|exists:students,id',
+        ]);
+
+        $student = Student::where('id', $request->student_id)
+            ->where('registration_session_id', $sessionId)
+            ->firstOrFail();
+
+        $student->update([
+            'is_submitted' => false,
+            'submitted_at' => null,
+        ]);
+
+        return back()->with('success', 'Student submission status has been reset successfully.');
+    }
+
+    /**
+     * Export students data to Excel for a registration session.
+     */
+    public function exportExcel(string $id)
+    {
+        $session = RegistrationSession::findOrFail($id);
+        
+        $filename = 'students_'.str_replace(['/', '\\'], '_', $session->name).'_'.now()->format('Y-m-d').'.xlsx';
+
+        return Excel::download(
+            new StudentsExport($id),
+            $filename
+        );
+    }
+
+    /**
+     * Export students data to PDF for a registration session.
+     */
+    public function exportPdf(string $id)
+    {
+        $session = RegistrationSession::findOrFail($id);
+        $students = Student::where('registration_session_id', $id)->get();
+
+        // TODO: Install barryvdh/laravel-dompdf package to enable PDF export
+        return back()->withErrors(['pdf' => 'PDF export is not available. Please install barryvdh/laravel-dompdf package.']);
+    }
+
+    /**
+     * Show the bulk upload page.
+     */
+    public function bulkUpload(string $id)
+    {
+        $session = RegistrationSession::findOrFail($id);
+        
+        return Inertia::render('Admin/RegistrationSessions/BulkUpload', [
+            'session' => $session,
+        ]);
+    }
+
+    /**
+     * Download Excel template for student bulk upload.
+     */
+    public function downloadTemplate(string $id)
+    {
+        $session = RegistrationSession::findOrFail($id);
+        
+        // Create CSV template with headers based on students table structure
+        $headers = [
+            'matric_number',
+            'identification_number', 
+            'name',
+            'gender',
+            'race',
+            'religion',
+            'email',
+            'phone'
+        ];
+        
+        $filename = 'student_upload_template.csv';
+        
+        $response = response()->streamDownload(function () use ($headers) {
+            $handle = fopen('php://output', 'w');
+            
+            // Add headers
+            fputcsv($handle, $headers);
+            
+            // Add sample row
+            fputcsv($handle, [
+                'S12345678',
+                '123456789012',
+                'John Doe',
+                'Male',
+                'Malay',
+                'Islam',
+                'john.doe@example.com',
+                '0123456789'
+            ]);
+            
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+        
+        return $response;
+    }
+
+    /**
+     * Process the uploaded CSV file and show preview.
+     */
+    public function processUpload(Request $request, string $id)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:csv,txt|max:2048'
+        ]);
+
+        $session = RegistrationSession::findOrFail($id);
+        $file = $request->file('file');
+        
+        try {
+            $previewData = [];
+            $errors = [];
+            
+            $handle = fopen($file->path(), 'r');
+            $headers = fgetcsv($handle); // Read header row
+            $rowNumber = 2; // Start from row 2 (after headers)
+            
+            while (($data = fgetcsv($handle)) !== false) {
+                if (count($data) < 3) continue; // Skip empty rows
+                
+                $studentData = [
+                    'matric_number' => $data[0] ?? '',
+                    'identification_number' => $data[1] ?? '',
+                    'name' => $data[2] ?? '',
+                    'gender' => $data[3] ?? '',
+                    'race' => $data[4] ?? '',
+                    'religion' => $data[5] ?? '',
+                    'email' => $data[6] ?? '',
+                    'phone' => $data[7] ?? '',
+                ];
+                
+                // Validate required fields
+                $rowErrors = [];
+                if (empty($studentData['matric_number'])) {
+                    $rowErrors[] = 'Matric number is required';
+                }
+                if (empty($studentData['identification_number'])) {
+                    $rowErrors[] = 'Identification number is required';
+                }
+                if (empty($studentData['name'])) {
+                    $rowErrors[] = 'Name is required';
+                }
+                if (!empty($studentData['email']) && !filter_var($studentData['email'], FILTER_VALIDATE_EMAIL)) {
+                    $rowErrors[] = 'Invalid email format';
+                }
+                
+                $previewData[] = [
+                    'row_number' => $rowNumber,
+                    'data' => $studentData,
+                    'has_errors' => !empty($rowErrors)
+                ];
+                
+                if (!empty($rowErrors)) {
+                    $errors[$rowNumber] = $rowErrors;
+                }
+                
+                $rowNumber++;
+            }
+            
+            fclose($handle);
+            
+            return Inertia::render('Admin/RegistrationSessions/BulkUpload', [
+                'session' => $session,
+                'previewData' => $previewData,
+                'errors' => $errors,
+                'showPreview' => true,
+            ]);
+            
+        } catch (\Exception $e) {
+            return back()->withErrors(['file' => 'Error processing file: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Confirm and save the uploaded student data.
+     */
+    public function confirmUpload(Request $request, string $id)
+    {
+        $session = RegistrationSession::findOrFail($id);
+        $studentsData = $request->input('students_data');
+        
+        $createdCount = 0;
+        $updatedCount = 0;
+        $errorCount = 0;
+        
+        foreach ($studentsData as $studentData) {
+            try {
+                $studentData['registration_session_id'] = $session->id;
+                $studentData['is_submitted'] = false;
+                
+                $student = Student::updateOrCreate(
+                    [
+                        'registration_session_id' => $session->id,
+                        'matric_number' => $studentData['matric_number']
+                    ],
+                    $studentData
+                );
+                
+                if ($student->wasRecentlyCreated) {
+                    $createdCount++;
+                } else {
+                    $updatedCount++;
+                }
+                
+            } catch (\Exception $e) {
+                $errorCount++;
+                \Log::error('Error creating student: ' . $e->getMessage(), $studentData);
+            }
+        }
+        
+        $message = "Bulk upload completed. Created: {$createdCount}, Updated: {$updatedCount}";
+        if ($errorCount > 0) {
+            $message .= ", Errors: {$errorCount}";
+        }
+        
+        return redirect()
+            ->route('admin.registration-sessions.show', $session->id)
+            ->with('success', $message);
     }
 
     /**

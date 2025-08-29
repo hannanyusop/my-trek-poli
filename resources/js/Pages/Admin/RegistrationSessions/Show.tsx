@@ -1,6 +1,6 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
-import { Calendar, Users, BookOpen, Clock, ArrowLeft, QrCode, ExternalLink, User, Target, Monitor } from 'lucide-react';
+import { Calendar, Users, BookOpen, Clock, ArrowLeft, QrCode, ExternalLink, User, Target, Monitor, RotateCcw, FileSpreadsheet, FileText, Download, Upload } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
 interface RegistrationSession {
@@ -70,6 +70,14 @@ export default function Show({ session, classes, students, registrationLink }: P
 
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text);
+    };
+
+    const handleUndoSubmission = (studentId: number, studentName: string) => {
+        if (confirm(`Are you sure you want to undo the submission for ${studentName}? This will reset their submission status to pending.`)) {
+            router.post(route('admin.registration-sessions.undo-submission', session.id), {
+                student_id: studentId,
+            });
+        }
     };
 
     return (
@@ -274,10 +282,40 @@ export default function Show({ session, classes, students, registrationLink }: P
 
                                     {/* Registered Students List */}
                                     <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-                                        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                                            <User className="mr-2 h-5 w-5" />
-                                            Registered Students ({students.length})
-                                        </h2>
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
+                                                <User className="mr-2 h-5 w-5" />
+                                                Registered Students ({students.length})
+                                            </h2>
+                                            
+                                            <div className="flex items-center gap-2">
+                                                <Link
+                                                    href={route('admin.registration-sessions.bulk-upload', session.id)}
+                                                    className="flex items-center px-3 py-2 text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+                                                >
+                                                    <Upload className="mr-2 h-4 w-4" />
+                                                    Bulk Upload
+                                                </Link>
+                                                {students.length > 0 && (
+                                                    <>
+                                                        <Link
+                                                            href={route('admin.registration-sessions.export.excel', session.id)}
+                                                            className="flex items-center px-3 py-2 text-sm font-medium text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900 rounded-md hover:bg-green-200 dark:hover:bg-green-800 transition-colors"
+                                                        >
+                                                            <FileSpreadsheet className="mr-2 h-4 w-4" />
+                                                            Export Excel
+                                                        </Link>
+                                                        <Link
+                                                            href={route('admin.registration-sessions.export.pdf', session.id)}
+                                                            className="flex items-center px-3 py-2 text-sm font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900 rounded-md hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
+                                                        >
+                                                            <FileText className="mr-2 h-4 w-4" />
+                                                            Export PDF
+                                                        </Link>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
                                         
                                         {students.length > 0 ? (
                                             <div className="overflow-x-auto">
@@ -298,6 +336,9 @@ export default function Show({ session, classes, students, registrationLink }: P
                                                             </th>
                                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                                                 Submitted
+                                                            </th>
+                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                                Actions
                                                             </th>
                                                         </tr>
                                                     </thead>
@@ -335,6 +376,18 @@ export default function Show({ session, classes, students, registrationLink }: P
                                                                             : '-'
                                                                         }
                                                                     </div>
+                                                                </td>
+                                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                                    {student.is_submitted && (
+                                                                        <button
+                                                                            onClick={() => handleUndoSubmission(student.id, student.name)}
+                                                                            className="flex items-center px-3 py-1 text-sm font-medium text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-900 rounded-md hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors"
+                                                                            title="Undo submission"
+                                                                        >
+                                                                            <RotateCcw className="mr-1 h-3 w-3" />
+                                                                            Undo
+                                                                        </button>
+                                                                    )}
                                                                 </td>
                                                             </tr>
                                                         ))}

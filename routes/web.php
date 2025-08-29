@@ -64,6 +64,13 @@ Route::middleware('auth')->group(function () {
         Route::resource('users', UserController::class);
         Route::resource('registration-sessions', RegistrationSessionController::class);
         Route::get('registration-sessions/{registrationSession}/projector', [RegistrationSessionController::class, 'projector'])->name('registration-sessions.projector');
+        Route::post('registration-sessions/{registration_session}/undo-submission', [RegistrationSessionController::class, 'undoSubmission'])->name('registration-sessions.undo-submission');
+        Route::get('registration-sessions/{registration_session}/export/excel', [RegistrationSessionController::class, 'exportExcel'])->name('registration-sessions.export.excel');
+        Route::get('registration-sessions/{registration_session}/export/pdf', [RegistrationSessionController::class, 'exportPdf'])->name('registration-sessions.export.pdf');
+        Route::get('registration-sessions/{registration_session}/bulk-upload', [RegistrationSessionController::class, 'bulkUpload'])->name('registration-sessions.bulk-upload');
+        Route::get('registration-sessions/{registration_session}/download-template', [RegistrationSessionController::class, 'downloadTemplate'])->name('registration-sessions.download-template');
+        Route::post('registration-sessions/{registration_session}/process-upload', [RegistrationSessionController::class, 'processUpload'])->name('registration-sessions.process-upload');
+        Route::post('registration-sessions/{registration_session}/confirm-upload', [RegistrationSessionController::class, 'confirmUpload'])->name('registration-sessions.confirm-upload');
         Route::resource('tracks', TrackController::class);
         Route::resource('races', RaceController::class);
         Route::resource('religions', ReligionController::class);
