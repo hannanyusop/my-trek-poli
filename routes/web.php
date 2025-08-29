@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\RegistrationSessionController;
+use App\Http\Controllers\Admin\TrackController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordResetController;
@@ -48,10 +49,7 @@ Route::middleware('auth')->group(function () {
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('users', UserController::class);
         Route::resource('registration-sessions', RegistrationSessionController::class);
-
-        Route::get('/tracks', function () {
-            return Inertia::render('Admin/Tracks');
-        })->name('tracks');
+        Route::resource('tracks', TrackController::class);
 
         Route::get('/roles', function () {
             return Inertia::render('Admin/Roles');

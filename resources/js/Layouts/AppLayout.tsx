@@ -1,7 +1,9 @@
 import { PropsWithChildren, useState, useEffect } from 'react';
 import { Head, usePage } from '@inertiajs/react';
+import { ToastContainer, toast } from 'react-toastify';
 import Sidebar from '@/Components/Sidebar';
 import TopBar from '@/Components/TopBar';
+import 'react-toastify/dist/ReactToastify.css';
 
 interface User {
     id: number;
@@ -13,7 +15,10 @@ export default function AppLayout({
     children, 
     title 
 }: PropsWithChildren<{ title?: string }>) {
-    const { auth } = usePage<{ auth?: { user: User } }>().props;
+    const { auth, flash } = usePage<{ 
+        auth?: { user: User }, 
+        flash?: { success?: string, error?: string } 
+    }>().props;
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
@@ -41,6 +46,16 @@ export default function AppLayout({
             document.body.style.overflow = 'unset';
         };
     }, [isMobileMenuOpen]);
+
+    // Handle flash messages
+    useEffect(() => {
+        if (flash?.success) {
+            toast.success(flash.success);
+        }
+        if (flash?.error) {
+            toast.error(flash.error);
+        }
+    }, [flash]);
     
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -84,6 +99,21 @@ export default function AppLayout({
                     </main>
                 </div>
             </div>
+            
+            {/* Toast Container */}
+            <ToastContainer
+                position="top-right"
+                autoClose={5000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                theme="light"
+                className="mt-16"
+            />
         </div>
     );
 }

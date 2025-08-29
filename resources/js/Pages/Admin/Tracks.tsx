@@ -1,8 +1,43 @@
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
+import { toast } from 'react-toastify';
 import AppLayout from '@/Layouts/AppLayout';
 import { Settings, Plus, Search, Edit, Trash2, BookOpen } from 'lucide-react';
 
-export default function Tracks() {
+interface Track {
+    id: number;
+    name: string;
+    description: string;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+interface Props {
+    tracks: Track[];
+}
+
+export default function Tracks({ tracks = [] }: Props) {
+    const handleDelete = (trackId: number, trackName: string) => {
+        if (confirm(`Are you sure you want to delete "${trackName}"? This action cannot be undone.`)) {
+            router.delete(route('admin.tracks.destroy', trackId), {
+                onSuccess: () => {
+                    // Success message will be handled by the backend flash message
+                },
+                onError: (errors) => {
+                    if (Object.keys(errors).length > 0) {
+                        Object.values(errors).forEach((error) => {
+                            if (typeof error === 'string') {
+                                toast.error(error);
+                            }
+                        });
+                    } else {
+                        toast.error('Failed to delete track. Please try again.');
+                    }
+                }
+            });
+        }
+    };
     return (
         <AppLayout>
             <Head title="Tracks Management" />
@@ -22,10 +57,13 @@ export default function Tracks() {
                                     </p>
                                 </div>
                                 
-                                <button className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                                <Link
+                                    href={route('admin.tracks.create')}
+                                    className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                                >
                                     <Plus className="mr-2 h-4 w-4" />
                                     Add Track
-                                </button>
+                                </Link>
                             </div>
 
                             <div className="mb-6">
@@ -40,38 +78,57 @@ export default function Tracks() {
                             </div>
 
                             <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                                <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <BookOpen className="h-8 w-8 text-indigo-600" />
-                                        <div className="flex space-x-2">
-                                            <button className="p-2 text-gray-500 hover:text-indigo-600 transition-colors">
-                                                <Edit className="h-4 w-4" />
-                                            </button>
-                                            <button className="p-2 text-gray-500 hover:text-red-600 transition-colors">
-                                                <Trash2 className="h-4 w-4" />
-                                            </button>
+                                {tracks.map((track) => (
+                                    <div key={track.id} className="rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <BookOpen className="h-8 w-8 text-indigo-600" />
+                                            <div className="flex space-x-2">
+                                                <Link
+                                                    href={route('admin.tracks.edit', track.id)}
+                                                    className="p-2 text-gray-500 hover:text-indigo-600 transition-colors"
+                                                    title="Edit track"
+                                                >
+                                                    <Edit className="h-4 w-4" />
+                                                </Link>
+                                                <button 
+                                                    onClick={() => handleDelete(track.id, track.name)}
+                                                    className="p-2 text-gray-500 hover:text-red-600 transition-colors"
+                                                    title="Delete track"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                                            {track.name}
+                                        </h3>
+                                        <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+                                            {track.description}
+                                        </p>
+                                        <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+                                            <span>Created {new Date(track.created_at).toLocaleDateString()}</span>
+                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                                track.is_active 
+                                                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+                                            }`}>
+                                                {track.is_active ? 'Active' : 'Inactive'}
+                                            </span>
                                         </div>
                                     </div>
-                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                                        Sample Track
-                                    </h3>
-                                    <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                                        This is a placeholder track. Track management functionality will be implemented here.
-                                    </p>
-                                    <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
-                                        <span>0 Courses</span>
-                                        <span>Active</span>
-                                    </div>
-                                </div>
+                                ))}
 
-                                <div className="rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 p-6 flex items-center justify-center hover:border-indigo-400 transition-colors cursor-pointer">
+                                <Link
+                                    href={route('admin.tracks.create')}
+                                    className="rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 p-6 flex items-center justify-center hover:border-indigo-400 transition-colors cursor-pointer"
+                                >
                                     <div className="text-center">
                                         <Plus className="mx-auto h-12 w-12 text-gray-400" />
                                         <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
                                             Add new track
                                         </p>
                                     </div>
-                                </div>
+                                </Link>
                             </div>
                         </div>
                     </div>
