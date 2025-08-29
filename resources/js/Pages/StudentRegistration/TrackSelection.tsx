@@ -1,5 +1,5 @@
 import { FormEventHandler, useState, useEffect } from 'react';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, router } from '@inertiajs/react';
 import { RegistrationSession, Student, Track } from '@/types';
 
 declare global {
@@ -34,6 +34,31 @@ export default function TrackSelection({ registrationSession, student, tracks, e
     const { data, setData, post, processing, errors } = useForm({
         preferences: [] as number[],
     });
+
+    const storageKey = `student_data_${registrationSession.link_token}`;
+
+    // Check if localStorage has valid student data, redirect if not
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const stored = localStorage.getItem(storageKey);
+            if (!stored) {
+                router.visit(route('student.registration.show', registrationSession.link_token));
+                return;
+            }
+            try {
+                const studentData = JSON.parse(stored);
+                if (!studentData.matric_number) {
+                    localStorage.removeItem(storageKey);
+                    router.visit(route('student.registration.show', registrationSession.link_token));
+                    return;
+                }
+            } catch (e) {
+                localStorage.removeItem(storageKey);
+                router.visit(route('student.registration.show', registrationSession.link_token));
+                return;
+            }
+        }
+    }, [storageKey, registrationSession.link_token]);
 
     useEffect(() => {
         if (existingPreferences.length > 0) {

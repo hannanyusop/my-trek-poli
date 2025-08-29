@@ -1,5 +1,5 @@
 import { FormEventHandler, useEffect } from 'react';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, router } from '@inertiajs/react';
 import {
     Select,
     SelectContent,
@@ -25,16 +25,85 @@ interface Props {
 }
 
 export default function Form({ registrationSession, student, tracks, races, religions }: Props) {
-    const { data, setData, post, processing, errors } = useForm({
-        matric_number: student?.matric_number || '',
-        identification_number: student?.identification_number || '',
-        name: student?.name || '',
-        gender: student?.gender || '',
-        race: student?.race || '',
-        religion: student?.religion || '',
-        email: student?.email || '',
-        phone: student?.phone || '',
-    });
+    const storageKey = `student_data_${registrationSession.link_token}`;
+    
+    // Load data from localStorage or use provided student data
+    const getInitialData = () => {
+        if (typeof window !== 'undefined') {
+            const stored = localStorage.getItem(storageKey);
+            if (stored) {
+                try {
+                    return JSON.parse(stored);
+                } catch (e) {
+                    localStorage.removeItem(storageKey);
+                }
+            }
+        }
+        return {
+            matric_number: student?.matric_number || '',
+            identification_number: student?.identification_number || '',
+            name: student?.name || '',
+            gender: student?.gender || '',
+            race: student?.race || '',
+            religion: student?.religion || '',
+            email: student?.email || '',
+            phone: student?.phone || '',
+        };
+    };
+
+    const { data, setData, post, processing, errors } = useForm(getInitialData());
+
+    // Check if localStorage has meaningful data, redirect to registration page if not
+    useEffect(() => {
+        if (typeof window !== 'undefined' && !student) {
+            const stored = localStorage.getItem(storageKey);
+            if (!stored) {
+                router.visit(route('student.registration.show', registrationSession.link_token));
+                return;
+            }
+            try {
+                const studentData = JSON.parse(stored);
+                if (!studentData.matric_number) {
+                    localStorage.removeItem(storageKey);
+                    router.visit(route('student.registration.show', registrationSession.link_token));
+                    return;
+                }
+            } catch (e) {
+                localStorage.removeItem(storageKey);
+                router.visit(route('student.registration.show', registrationSession.link_token));
+                return;
+            }
+        }
+    }, [student, storageKey, registrationSession.link_token]);
+
+    // Update form data when student is found via lookup
+    useEffect(() => {
+        if (student && typeof window !== 'undefined') {
+            const studentData = {
+                matric_number: student.matric_number || '',
+                identification_number: student.identification_number || '',
+                name: student.name || '',
+                gender: student.gender || '',
+                race: student.race || '',
+                religion: student.religion || '',
+                email: student.email || '',
+                phone: student.phone || '',
+            };
+            localStorage.setItem(storageKey, JSON.stringify(studentData));
+            
+            // Update form data with student info
+            Object.entries(studentData).forEach(([key, value]) => {
+                setData(key as keyof typeof studentData, value);
+            });
+        }
+    }, [student, storageKey]);
+
+    // Save form data to localStorage whenever it changes (only if there's meaningful data)
+    useEffect(() => {
+        if (typeof window !== 'undefined' && (data.matric_number || data.name || data.email)) {
+            localStorage.setItem(storageKey, JSON.stringify(data));
+        }
+    }, [data, storageKey]);
 
     // Show toast notifications for validation errors
     useEffect(() => {
@@ -55,6 +124,14 @@ export default function Form({ registrationSession, student, tracks, races, reli
         post(route('student.registration.store.student', registrationSession.link_token));
     };
 
+    const handleLogout = () => {
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem(storageKey);
+            localStorage.removeItem(`student_submitted_${registrationSession.link_token}`);
+        }
+        router.visit(route('student.registration.show', registrationSession.link_token));
+    };
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 py-12 px-4 sm:px-6 lg:px-8">
             <Head title={`Student Information - ${registrationSession.name}`} />
@@ -68,9 +145,23 @@ export default function Form({ registrationSession, student, tracks, races, reli
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                             </svg>
                         </div>
-                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                            Student Information
-                        </h1>
+                        <div className="flex justify-between items-center mb-4">
+                            <div className="flex-1"></div>
+                            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                                Student Information
+                            </h1>
+                            <div className="flex-1 flex justify-end">
+                                {(student || data.matric_number) && (
+                                    <button
+                                        onClick={handleLogout}
+                                        className="text-sm text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 transition-colors"
+                                        title="Clear student data and start over"
+                                    >
+                                        Clear & Start Over
+                                    </button>
+                                )}
+                            </div>
+                        </div>
                         <p className="text-gray-600 dark:text-gray-300">
                             {student ? 'Update your information and proceed to track selection' : 'Please provide your information to continue'}
                         </p>

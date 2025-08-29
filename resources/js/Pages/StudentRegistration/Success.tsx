@@ -1,4 +1,5 @@
 import { Head } from '@inertiajs/react';
+import { useEffect } from 'react';
 
 interface RegistrationSession {
     id: number;
@@ -55,6 +56,14 @@ interface Props {
 }
 
 export default function Success({ registrationSession, student, preferences, placement }: Props) {
+    // Mark submission as complete in localStorage
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const submissionKey = `student_submitted_${registrationSession.link_token}`;
+            localStorage.setItem(submissionKey, 'true');
+        }
+    }, [registrationSession.link_token]);
+
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleString('en-MY', {
             year: 'numeric',

@@ -1,5 +1,5 @@
-import { FormEventHandler } from 'react';
-import { Head, useForm } from '@inertiajs/react';
+import { FormEventHandler, useEffect } from 'react';
+import { Head, useForm, router } from '@inertiajs/react';
 
 declare global {
     function route(name?: string, params?: any, absolute?: boolean): string;
@@ -22,6 +22,37 @@ export default function Show({ registrationSession }: Props) {
     const { data, setData, post, processing, errors } = useForm({
         matric_number: '',
     });
+
+    const storageKey = `student_data_${registrationSession.link_token}`;
+
+    // Check localStorage on page load and redirect if student data exists
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const stored = localStorage.getItem(storageKey);
+            if (stored) {
+                try {
+                    const studentData = JSON.parse(stored);
+                    // Check if student has completed submission
+                    const submissionKey = `student_submitted_${registrationSession.link_token}`;
+                    const isSubmitted = localStorage.getItem(submissionKey) === 'true';
+                    
+                    if (isSubmitted && studentData.matric_number) {
+                        // Redirect to summary page
+                        router.visit(route('student.registration.summary', [
+                            registrationSession.link_token,
+                            studentData.matric_number
+                        ]));
+                    } else {
+                        // Redirect to form page
+                        router.visit(route('student.registration.lookup.form', registrationSession.link_token));
+                    }
+                } catch (e) {
+                    // Invalid data, clear it
+                    localStorage.removeItem(storageKey);
+                }
+            }
+        }
+    }, [registrationSession.link_token, storageKey]);
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
