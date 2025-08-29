@@ -33,21 +33,3 @@ jobs:
 
       - name: Build assets
         run: npm run build
-
-      - name: Setup SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.PRIVATE_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.HOST }} >> ~/.ssh/known_hosts
-
-      - name: Deploy with Deployer
-        run: |
-          # Replace placeholders in deploy.php with actual values
-          sed -i "s/{{ secrets.HOST }}/${{ secrets.HOST }}/g" deploy.php
-          sed -i "s/{{ secrets.USERNAME }}/${{ secrets.USERNAME }}/g" deploy.php
-          sed -i "s/{{ secrets.DEPLOY_PATH }}/${{ secrets.DEPLOY_PATH }}/g" deploy.php
-          sed -i "s|git@github.com:your-username/my-trek-poli.git|${{ github.server_url }}/${{ github.repository }}.git|g" deploy.php
-
-          # Deploy using Deployer
-          php vendor/bin/dep deploy production --ssh="ssh -i ~/.ssh/deploy_key"
