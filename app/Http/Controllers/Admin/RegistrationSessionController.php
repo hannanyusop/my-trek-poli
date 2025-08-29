@@ -156,7 +156,7 @@ class RegistrationSessionController extends Controller
     public function exportExcel(string $id)
     {
         $session = RegistrationSession::findOrFail($id);
-        
+
         $filename = 'students_'.str_replace(['/', '\\'], '_', $session->name).'_'.now()->format('Y-m-d').'.xlsx';
 
         return Excel::download(
@@ -183,7 +183,7 @@ class RegistrationSessionController extends Controller
     public function bulkUpload(string $id)
     {
         $session = RegistrationSession::findOrFail($id);
-        
+
         return Inertia::render('Admin/RegistrationSessions/BulkUpload', [
             'session' => $session,
         ]);
@@ -195,27 +195,27 @@ class RegistrationSessionController extends Controller
     public function downloadTemplate(string $id)
     {
         $session = RegistrationSession::findOrFail($id);
-        
+
         // Create CSV template with headers based on students table structure
         $headers = [
             'matric_number',
-            'identification_number', 
+            'identification_number',
             'name',
             'gender',
             'race',
             'religion',
             'email',
-            'phone'
+            'phone',
         ];
-        
+
         $filename = 'student_upload_template.csv';
-        
+
         $response = response()->streamDownload(function () use ($headers) {
             $handle = fopen('php://output', 'w');
-            
+
             // Add headers
             fputcsv($handle, $headers);
-            
+
             // Add sample row
             fputcsv($handle, [
                 'S12345678',
@@ -225,15 +225,15 @@ class RegistrationSessionController extends Controller
                 'Malay',
                 'Islam',
                 'john.doe@example.com',
-                '0123456789'
+                '0123456789',
             ]);
-            
+
             fclose($handle);
         }, $filename, [
             'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
-        
+
         return $response;
     }
 
@@ -243,73 +243,107 @@ class RegistrationSessionController extends Controller
     public function processUpload(Request $request, string $id)
     {
         $request->validate([
-            'file' => 'required|file|mimes:csv,txt|max:2048'
+            'file' => 'required|file|mimes:csv,txt|max:2048',
         ]);
 
         $session = RegistrationSession::findOrFail($id);
         $file = $request->file('file');
-        
+
         try {
             $previewData = [];
             $errors = [];
-            
+            $seenMatricNumbers = []; // Track matric numbers in current file
+
+            // Get existing matric numbers from database for this session
+            $existingMatricNumbers = Student::where('registration_session_id', $id)
+                ->pluck('matric_number')
+                ->toArray();
+
             $handle = fopen($file->path(), 'r');
             $headers = fgetcsv($handle); // Read header row
             $rowNumber = 2; // Start from row 2 (after headers)
-            
+
             while (($data = fgetcsv($handle)) !== false) {
-                if (count($data) < 3) continue; // Skip empty rows
-                
+                if (count($data) < 3) {
+                    continue;
+                } // Skip empty rows
+
                 $studentData = [
-                    'matric_number' => $data[0] ?? '',
-                    'identification_number' => $data[1] ?? '',
-                    'name' => $data[2] ?? '',
-                    'gender' => $data[3] ?? '',
-                    'race' => $data[4] ?? '',
-                    'religion' => $data[5] ?? '',
-                    'email' => $data[6] ?? '',
-                    'phone' => $data[7] ?? '',
+                    'matric_number' => trim($data[0] ?? ''),
+                    'identification_number' => trim($data[1] ?? ''),
+                    'name' => trim($data[2] ?? ''),
+                    'gender' => trim($data[3] ?? ''),
+                    'race' => trim($data[4] ?? ''),
+                    'religion' => trim($data[5] ?? ''),
+                    'email' => trim($data[6] ?? ''),
+                    'phone' => trim($data[7] ?? ''),
                 ];
-                
-                // Validate required fields
+
+                // Validate required fields and duplicates
                 $rowErrors = [];
+
                 if (empty($studentData['matric_number'])) {
                     $rowErrors[] = 'Matric number is required';
+                } else {
+                    // Check for duplicate in database
+                    if (in_array($studentData['matric_number'], $existingMatricNumbers)) {
+                        $rowErrors[] = 'Matric number already exists in database';
+                    }
+
+                    // Check for duplicate in current file
+                    if (in_array($studentData['matric_number'], $seenMatricNumbers)) {
+                        $rowErrors[] = 'Duplicate matric number in file';
+                    } else {
+                        $seenMatricNumbers[] = $studentData['matric_number'];
+                    }
                 }
+
                 if (empty($studentData['identification_number'])) {
                     $rowErrors[] = 'Identification number is required';
                 }
                 if (empty($studentData['name'])) {
                     $rowErrors[] = 'Name is required';
                 }
-                if (!empty($studentData['email']) && !filter_var($studentData['email'], FILTER_VALIDATE_EMAIL)) {
+                if (empty($studentData['gender']) || ! in_array(strtolower($studentData['gender']), ['male', 'female'])) {
+                    $rowErrors[] = 'Gender must be Male or Female';
+                }
+                if (empty($studentData['race'])) {
+                    $rowErrors[] = 'Race is required';
+                }
+                if (empty($studentData['religion'])) {
+                    $rowErrors[] = 'Religion is required';
+                }
+                if (! empty($studentData['email']) && ! filter_var($studentData['email'], FILTER_VALIDATE_EMAIL)) {
                     $rowErrors[] = 'Invalid email format';
                 }
-                
+                if (empty($studentData['phone'])) {
+                    $rowErrors[] = 'Phone number is required';
+                }
+
                 $previewData[] = [
                     'row_number' => $rowNumber,
                     'data' => $studentData,
-                    'has_errors' => !empty($rowErrors)
+                    'has_errors' => ! empty($rowErrors),
                 ];
-                
-                if (!empty($rowErrors)) {
+
+                if (! empty($rowErrors)) {
                     $errors[$rowNumber] = $rowErrors;
                 }
-                
+
                 $rowNumber++;
             }
-            
+
             fclose($handle);
-            
+
             return Inertia::render('Admin/RegistrationSessions/BulkUpload', [
                 'session' => $session,
                 'previewData' => $previewData,
                 'errors' => $errors,
                 'showPreview' => true,
             ]);
-            
+
         } catch (\Exception $e) {
-            return back()->withErrors(['file' => 'Error processing file: ' . $e->getMessage()]);
+            return back()->withErrors(['file' => 'Error processing file: '.$e->getMessage()]);
         }
     }
 
@@ -320,41 +354,41 @@ class RegistrationSessionController extends Controller
     {
         $session = RegistrationSession::findOrFail($id);
         $studentsData = $request->input('students_data');
-        
+
         $createdCount = 0;
         $updatedCount = 0;
         $errorCount = 0;
-        
+
         foreach ($studentsData as $studentData) {
             try {
                 $studentData['registration_session_id'] = $session->id;
                 $studentData['is_submitted'] = false;
-                
+
                 $student = Student::updateOrCreate(
                     [
                         'registration_session_id' => $session->id,
-                        'matric_number' => $studentData['matric_number']
+                        'matric_number' => $studentData['matric_number'],
                     ],
                     $studentData
                 );
-                
+
                 if ($student->wasRecentlyCreated) {
                     $createdCount++;
                 } else {
                     $updatedCount++;
                 }
-                
+
             } catch (\Exception $e) {
                 $errorCount++;
-                \Log::error('Error creating student: ' . $e->getMessage(), $studentData);
+                \Log::error('Error creating student: '.$e->getMessage(), $studentData);
             }
         }
-        
+
         $message = "Bulk upload completed. Created: {$createdCount}, Updated: {$updatedCount}";
         if ($errorCount > 0) {
             $message .= ", Errors: {$errorCount}";
         }
-        
+
         return redirect()
             ->route('admin.registration-sessions.show', $session->id)
             ->with('success', $message);
