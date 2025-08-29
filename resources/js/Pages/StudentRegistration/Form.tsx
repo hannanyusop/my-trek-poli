@@ -1,5 +1,12 @@
 import { FormEventHandler } from 'react';
 import { Head, useForm } from '@inertiajs/react';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 
 declare global {
     function route(name?: string, params?: any, absolute?: boolean): string;
@@ -39,13 +46,29 @@ interface Track {
     };
 }
 
+interface Race {
+    id: number;
+    name: string;
+    code: string;
+    is_active: boolean;
+}
+
+interface Religion {
+    id: number;
+    name: string;
+    code: string;
+    is_active: boolean;
+}
+
 interface Props {
     registrationSession: RegistrationSession;
     student: Student | null;
     tracks: Track[];
+    races: Race[];
+    religions: Religion[];
 }
 
-export default function Form({ registrationSession, student, tracks }: Props) {
+export default function Form({ registrationSession, student, tracks, races, religions }: Props) {
     const { data, setData, post, processing, errors } = useForm({
         matric_number: student?.matric_number || '',
         identification_number: student?.identification_number || '',
@@ -148,22 +171,19 @@ export default function Form({ registrationSession, student, tracks }: Props) {
                                 <label htmlFor="gender" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                                     Gender <span className="text-red-500">*</span>
                                 </label>
-                                <select
-                                    id="gender"
-                                    name="gender"
-                                    required
-                                    className={`block w-full px-4 py-3 border rounded-lg transition-colors duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+                                <Select value={data.gender} onValueChange={(value) => setData('gender', value as 'male' | 'female' | '')}>
+                                    <SelectTrigger className={`w-full px-4 py-3 h-auto ${
                                         errors.gender
                                             ? 'border-red-300 dark:border-red-600 focus:ring-red-500'
                                             : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
-                                    }`}
-                                    value={data.gender}
-                                    onChange={(e) => setData('gender', e.target.value as 'male' | 'female' | '')}
-                                >
-                                    <option value="">Select Gender</option>
-                                    <option value="male">Male</option>
-                                    <option value="female">Female</option>
-                                </select>
+                                    }`}>
+                                        <SelectValue placeholder="Select Gender" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="male">Male</SelectItem>
+                                        <SelectItem value="female">Female</SelectItem>
+                                    </SelectContent>
+                                </Select>
                                 {errors.gender && (
                                     <p className="mt-2 text-sm text-red-600 dark:text-red-400">{errors.gender}</p>
                                 )}
@@ -173,20 +193,22 @@ export default function Form({ registrationSession, student, tracks }: Props) {
                                 <label htmlFor="race" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                                     Race <span className="text-red-500">*</span>
                                 </label>
-                                <input
-                                    id="race"
-                                    name="race"
-                                    type="text"
-                                    required
-                                    className={`block w-full px-4 py-3 border rounded-lg transition-colors duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+                                <Select value={data.race} onValueChange={(value) => setData('race', value)}>
+                                    <SelectTrigger className={`w-full px-4 py-3 h-auto ${
                                         errors.race
                                             ? 'border-red-300 dark:border-red-600 focus:ring-red-500'
                                             : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
-                                    }`}
-                                    placeholder="Enter your race"
-                                    value={data.race}
-                                    onChange={(e) => setData('race', e.target.value)}
-                                />
+                                    }`}>
+                                        <SelectValue placeholder="Select Race" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {races.map((race) => (
+                                            <SelectItem key={race.id} value={race.name}>
+                                                {race.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                                 {errors.race && (
                                     <p className="mt-2 text-sm text-red-600 dark:text-red-400">{errors.race}</p>
                                 )}
@@ -196,20 +218,22 @@ export default function Form({ registrationSession, student, tracks }: Props) {
                                 <label htmlFor="religion" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                                     Religion <span className="text-red-500">*</span>
                                 </label>
-                                <input
-                                    id="religion"
-                                    name="religion"
-                                    type="text"
-                                    required
-                                    className={`block w-full px-4 py-3 border rounded-lg transition-colors duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+                                <Select value={data.religion} onValueChange={(value) => setData('religion', value)}>
+                                    <SelectTrigger className={`w-full px-4 py-3 h-auto ${
                                         errors.religion
                                             ? 'border-red-300 dark:border-red-600 focus:ring-red-500'
                                             : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
-                                    }`}
-                                    placeholder="Enter your religion"
-                                    value={data.religion}
-                                    onChange={(e) => setData('religion', e.target.value)}
-                                />
+                                    }`}>
+                                        <SelectValue placeholder="Select Religion" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {religions.map((religion) => (
+                                            <SelectItem key={religion.id} value={religion.name}>
+                                                {religion.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                                 {errors.religion && (
                                     <p className="mt-2 text-sm text-red-600 dark:text-red-400">{errors.religion}</p>
                                 )}

@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StudentRegistrationRequest;
 use App\Http\Requests\TrackPreferencesRequest;
+use App\Models\Race;
 use App\Models\RegistrationSession;
+use App\Models\RegistrationSessionTrack;
+use App\Models\Religion;
 use App\Models\Student;
 use App\Models\StudentPreference;
 use Illuminate\Http\RedirectResponse;
@@ -20,6 +23,22 @@ class StudentRegistrationController extends Controller
 
         return Inertia::render('StudentRegistration/Show', [
             'registrationSession' => $registrationSession,
+        ]);
+    }
+
+    public function showLookupForm(string $token): Response
+    {
+        $registrationSession = RegistrationSession::where('link_token', $token)->firstOrFail();
+        $tracks = RegistrationSessionTrack::where('registration_session_id', $registrationSession->id)->with('track')->get();
+        $races = Race::where('is_active', true)->orderBy('name')->get();
+        $religions = Religion::where('is_active', true)->orderBy('name')->get();
+
+        return Inertia::render('StudentRegistration/Form', [
+            'registrationSession' => $registrationSession,
+            'student' => null,
+            'tracks' => $tracks,
+            'races' => $races,
+            'religions' => $religions,
         ]);
     }
 
@@ -43,11 +62,15 @@ class StudentRegistrationController extends Controller
         }
 
         $tracks = RegistrationSessionTrack::where('registration_session_id', $registrationSession->id)->with('track')->get();
+        $races = Race::where('is_active', true)->orderBy('name')->get();
+        $religions = Religion::where('is_active', true)->orderBy('name')->get();
 
         return Inertia::render('StudentRegistration/Form', [
             'registrationSession' => $registrationSession,
             'student' => $student,
             'tracks' => $tracks,
+            'races' => $races,
+            'religions' => $religions,
         ]);
     }
 

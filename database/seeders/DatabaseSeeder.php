@@ -18,6 +18,8 @@ class DatabaseSeeder extends Seeder
             RegistrationSessionsSeeder::class,
             RegistrationSessionTracksSeeder::class,
             ClassesSeeder::class,
+            RacesSeeder::class,
+            ReligionsSeeder::class
         ]);
 
         // User::factory(10)->create();

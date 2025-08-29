@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Admin\RegistrationSessionController;
+use App\Http\Controllers\Admin\RaceController;
+use App\Http\Controllers\Admin\ReligionController;
 use App\Http\Controllers\Admin\TrackController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\LoginController;
@@ -17,6 +19,7 @@ Route::get('/', function () {
 // Student Registration Routes (public)
 Route::prefix('register')->name('student.registration.')->group(function () {
     Route::get('{token}', [StudentRegistrationController::class, 'show'])->name('show');
+    Route::get('{token}/lookup', [StudentRegistrationController::class, 'showLookupForm'])->name('lookup.form');
     Route::post('{token}/lookup', [StudentRegistrationController::class, 'lookupStudent'])->name('lookup');
     Route::post('{token}/student', [StudentRegistrationController::class, 'storeStudent'])->name('store.student');
     Route::get('{token}/tracks', [StudentRegistrationController::class, 'showTrackSelection'])->name('tracks');
@@ -61,6 +64,8 @@ Route::middleware('auth')->group(function () {
         Route::resource('registration-sessions', RegistrationSessionController::class);
         Route::get('registration-sessions/{registrationSession}/projector', [RegistrationSessionController::class, 'projector'])->name('registration-sessions.projector');
         Route::resource('tracks', TrackController::class);
+        Route::resource('races', RaceController::class);
+        Route::resource('religions', ReligionController::class);
 
         Route::get('/roles', function () {
             return Inertia::render('Admin/Roles');

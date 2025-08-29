@@ -11,7 +11,11 @@ import {
     ChevronUp,
     Sun,
     Moon,
-    X
+    X,
+    BookOpen,
+    Church,
+    ChevronDown,
+    ChevronRight
 } from 'lucide-react';
 import { useTheme } from '@/Contexts/ThemeContext';
 
@@ -28,6 +32,13 @@ interface SidebarProps {
     isCollapsed?: boolean;
 }
 
+interface NavigationItem {
+    name: string;
+    href?: string;
+    icon: any;
+    children?: NavigationItem[];
+}
+
 const navigation = [
     { 
         name: 'Dashboard', 
@@ -41,16 +52,37 @@ const navigation = [
     },
 ];
 
-const adminNavigation = [
+const adminNavigation: NavigationItem[] = [
     { 
         name: 'Users', 
         href: '/admin/users', 
         icon: Users 
     },
     { 
-        name: 'Tracks', 
-        href: '/admin/tracks', 
-        icon: Settings 
+        name: 'Registration Sessions', 
+        href: '/admin/registration-sessions', 
+        icon: GraduationCap 
+    },
+    { 
+        name: 'Master Data', 
+        icon: Settings,
+        children: [
+            {
+                name: 'Races',
+                href: '/admin/races',
+                icon: Users
+            },
+            {
+                name: 'Religions',
+                href: '/admin/religions',
+                icon: Church
+            },
+            {
+                name: 'Tracks',
+                href: '/admin/tracks',
+                icon: BookOpen
+            }
+        ]
     },
     { 
         name: 'Roles', 
@@ -61,8 +93,17 @@ const adminNavigation = [
 
 export default function Sidebar({ className = '', user, onClose, isCollapsed = false }: SidebarProps) {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [openSubMenus, setOpenSubMenus] = useState<string[]>([]);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const { theme, toggleTheme } = useTheme();
+
+    const toggleSubMenu = (menuName: string) => {
+        setOpenSubMenus(prev => 
+            prev.includes(menuName) 
+                ? prev.filter(name => name !== menuName)
+                : [...prev, menuName]
+        );
+    };
 
     const handleLogout = () => {
         router.post('/logout');
@@ -154,23 +195,75 @@ export default function Sidebar({ className = '', user, onClose, isCollapsed = f
                     )}
                     <div className="space-y-1">
                         {adminNavigation.map((item) => (
-                            <Link
-                                key={item.name}
-                                href={item.href}
-                                onClick={onClose}
-                                className={`group flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors duration-200 ${
-                                    isCollapsed ? 'px-2 py-2 justify-center' : 'px-3 py-2'
-                                }`}
-                                title={isCollapsed ? item.name : undefined}
-                            >
-                                <item.icon
-                                    className={`h-5 w-5 text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300 ${
-                                        isCollapsed ? '' : 'mr-3'
-                                    }`}
-                                    aria-hidden="true"
-                                />
-                                {!isCollapsed && item.name}
-                            </Link>
+                            <div key={item.name}>
+                                {item.children ? (
+                                    <>
+                                        {/* Parent menu item with submenu */}
+                                        <button
+                                            onClick={() => !isCollapsed && toggleSubMenu(item.name)}
+                                            className={`group flex items-center w-full text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors duration-200 ${
+                                                isCollapsed ? 'px-2 py-2 justify-center' : 'px-3 py-2'
+                                            }`}
+                                            title={isCollapsed ? item.name : undefined}
+                                        >
+                                            <item.icon
+                                                className={`h-5 w-5 text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300 ${
+                                                    isCollapsed ? '' : 'mr-3'
+                                                }`}
+                                                aria-hidden="true"
+                                            />
+                                            {!isCollapsed && (
+                                                <>
+                                                    <span className="flex-1 text-left">{item.name}</span>
+                                                    {openSubMenus.includes(item.name) ? (
+                                                        <ChevronDown className="h-4 w-4" />
+                                                    ) : (
+                                                        <ChevronRight className="h-4 w-4" />
+                                                    )}
+                                                </>
+                                            )}
+                                        </button>
+                                        
+                                        {/* Submenu items */}
+                                        {!isCollapsed && openSubMenus.includes(item.name) && (
+                                            <div className="ml-6 mt-1 space-y-1">
+                                                {item.children.map((child) => (
+                                                    <Link
+                                                        key={child.name}
+                                                        href={child.href!}
+                                                        onClick={onClose}
+                                                        className="group flex items-center px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors duration-200"
+                                                    >
+                                                        <child.icon
+                                                            className="h-4 w-4 text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300 mr-3"
+                                                            aria-hidden="true"
+                                                        />
+                                                        {child.name}
+                                                    </Link>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </>
+                                ) : (
+                                    /* Regular menu item */
+                                    <Link
+                                        href={item.href!}
+                                        onClick={onClose}
+                                        className={`group flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors duration-200 ${
+                                            isCollapsed ? 'px-2 py-2 justify-center' : 'px-3 py-2'
+                                        }`}
+                                        title={isCollapsed ? item.name : undefined}
+                                    >
+                                        <item.icon
+                                            className={`h-5 w-5 text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300 ${
+                                                isCollapsed ? '' : 'mr-3'
+                                            }`}
+                                            aria-hidden="true"
+                                        />
+                                        {!isCollapsed && item.name}
+                                    </Link>
+                                )}
+                            </div>
                         ))}
                     </div>
                 </div>
