@@ -1,8 +1,8 @@
 import { Link, router } from '@inertiajs/react';
 import { useState, useRef, useEffect } from 'react';
-import { 
-    Home, 
-    GraduationCap, 
+import {
+    Home,
+    GraduationCap,
     Users,
     Settings,
     UserCheck,
@@ -40,31 +40,31 @@ interface NavigationItem {
 }
 
 const navigation = [
-    { 
-        name: 'Dashboard', 
-        href: '/', 
-        icon: Home 
+    {
+        name: 'Dashboard',
+        href: '/dashboard',
+        icon: Home
     },
-    { 
-        name: 'Semester Registration', 
-        href: '/semester-registration', 
-        icon: GraduationCap 
+    {
+        name: 'Semester Registration',
+        href: '/semester-registration',
+        icon: GraduationCap
     },
 ];
 
 const adminNavigation: NavigationItem[] = [
-    { 
-        name: 'Users', 
-        href: '/admin/users', 
-        icon: Users 
+    {
+        name: 'Users',
+        href: '/admin/users',
+        icon: Users
     },
-    { 
-        name: 'Registration Sessions', 
-        href: '/admin/registration-sessions', 
-        icon: GraduationCap 
+    {
+        name: 'Registration Sessions',
+        href: '/admin/registration-sessions',
+        icon: GraduationCap
     },
-    { 
-        name: 'Master Data', 
+    {
+        name: 'Master Data',
         icon: Settings,
         children: [
             {
@@ -84,10 +84,10 @@ const adminNavigation: NavigationItem[] = [
             }
         ]
     },
-    { 
-        name: 'Roles', 
-        href: '/admin/roles', 
-        icon: UserCheck 
+    {
+        name: 'Roles',
+        href: '/admin/roles',
+        icon: UserCheck
     },
 ];
 
@@ -98,8 +98,8 @@ export default function Sidebar({ className = '', user, onClose, isCollapsed = f
     const { theme, toggleTheme } = useTheme();
 
     const toggleSubMenu = (menuName: string) => {
-        setOpenSubMenus(prev => 
-            prev.includes(menuName) 
+        setOpenSubMenus(prev =>
+            prev.includes(menuName)
                 ? prev.filter(name => name !== menuName)
                 : [...prev, menuName]
         );
@@ -136,13 +136,13 @@ export default function Sidebar({ className = '', user, onClose, isCollapsed = f
                         Trek Poli
                     </h1>
                 )}
-                
+
                 {isCollapsed && (
                     <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center">
                         <span className="text-white font-bold text-sm">TP</span>
                     </div>
                 )}
-                
+
                 {/* Mobile close button */}
                 {onClose && (
                     <button
@@ -223,7 +223,7 @@ export default function Sidebar({ className = '', user, onClose, isCollapsed = f
                                                 </>
                                             )}
                                         </button>
-                                        
+
                                         {/* Submenu items */}
                                         {!isCollapsed && openSubMenus.includes(item.name) && (
                                             <div className="ml-6 mt-1 space-y-1">
@@ -287,7 +287,7 @@ export default function Sidebar({ className = '', user, onClose, isCollapsed = f
                             }`}>
                                 {getInitials(user.name)}
                             </div>
-                            
+
                             {/* User Info - Hidden when collapsed */}
                             {!isCollapsed && (
                                 <>
@@ -299,9 +299,9 @@ export default function Sidebar({ className = '', user, onClose, isCollapsed = f
                                             {user.email}
                                         </p>
                                     </div>
-                                    
+
                                     {/* Chevron */}
-                                    <ChevronUp 
+                                    <ChevronUp
                                         className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${
                                             isDropdownOpen ? 'rotate-180' : ''
                                         }`}
@@ -324,7 +324,7 @@ export default function Sidebar({ className = '', user, onClose, isCollapsed = f
                                     <User className="mr-3 h-4 w-4" />
                                     View Profile
                                 </Link>
-                                
+
                                 <button
                                     onClick={toggleTheme}
                                     className="group flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors duration-200"
@@ -336,7 +336,7 @@ export default function Sidebar({ className = '', user, onClose, isCollapsed = f
                                     )}
                                     {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
                                 </button>
-                                
+
                                 <button
                                     onClick={() => {
                                         handleLogout();
