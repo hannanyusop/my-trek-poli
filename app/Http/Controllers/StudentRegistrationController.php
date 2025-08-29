@@ -109,12 +109,15 @@ class StudentRegistrationController extends Controller
     public function storeStudent(StudentRegistrationRequest $request, string $token): RedirectResponse
     {
         $registrationSession = RegistrationSession::where('link_token', $token)->first();
+        $validatedData = $request->validated();
+        unset($validatedData['matric_number']);
+        
         $student = Student::updateOrCreate(
             [
                 'registration_session_id' => $registrationSession->id,
                 'matric_number' => $request->matric_number,
             ],
-            $request->validated()
+            $validatedData
         );
 
         session(['student_id' => $student->id]);

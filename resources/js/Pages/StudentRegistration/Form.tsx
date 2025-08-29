@@ -89,7 +89,8 @@ export default function Form({ registrationSession, student, tracks, races, reli
                                     type="text"
                                     className="block w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white cursor-not-allowed"
                                     value={data.matric_number}
-                                    onChange={(e) => setData('matric_number', e.target.value)}
+                                    readOnly
+                                    disabled
                                 />
                             </div>
 

@@ -14,7 +14,6 @@ class StudentRegistrationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'matric_number' => 'required|string|max:255',
             'identification_number' => 'required|string|max:255',
             'name' => 'required|string|max:255',
             'gender' => 'required|in:male,female',
@@ -28,7 +27,6 @@ class StudentRegistrationRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'matric_number.required' => 'Matric number is required',
             'identification_number.required' => 'IC/Passport number is required',
             'name.required' => 'Name is required',
             'gender.required' => 'Gender is required',
