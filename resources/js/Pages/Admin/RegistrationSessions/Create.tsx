@@ -68,7 +68,7 @@ export default function CreateRegistrationSession({ tracks }: CreateRegistration
         console.log('Form tracks (data):', data.tracks);
         console.log('ValidateStep2 result:', validateStep2());
         console.log('=== END HANDLE NEXT DEBUG ===');
-        
+
         if (currentStep < 3) {
             // Validate current step before proceeding
             if (currentStep === 1 && !validateStep1()) {
@@ -79,7 +79,7 @@ export default function CreateRegistrationSession({ tracks }: CreateRegistration
                 console.log('Step 2 validation failed');
                 return;
             }
-            
+
             console.log('Moving to step:', currentStep + 1);
             // Simply move to next step - we'll handle data compilation in handleSubmit
             setCurrentStep(currentStep + 1);
@@ -97,18 +97,18 @@ export default function CreateRegistrationSession({ tracks }: CreateRegistration
         console.log('Track ID being toggled:', trackId);
         console.log('Current selectedTracks before toggle:', selectedTracks);
         console.log('Current data.tracks before toggle:', data.tracks);
-        
+
         setSelectedTracks(prev => {
-            const updated = prev.includes(trackId) 
+            const updated = prev.includes(trackId)
                 ? prev.filter(id => id !== trackId)
                 : [...prev, trackId];
-            
+
             console.log('Updated selectedTracks:', updated);
-            
+
             // Update the Inertia form data with new track selection
             setData('tracks', updated);
             console.log('Called setData with tracks:', updated);
-            
+
             // Initialize classes for newly selected tracks
             if (!prev.includes(trackId)) {
                 setClasses(prevClasses => {
@@ -130,7 +130,7 @@ export default function CreateRegistrationSession({ tracks }: CreateRegistration
                     return updatedClasses;
                 });
             }
-            
+
             console.log('=== END TRACK TOGGLE DEBUG ===');
             return updated;
         });
@@ -142,7 +142,7 @@ export default function CreateRegistrationSession({ tracks }: CreateRegistration
             name: '',
             quota: 0
         };
-        
+
         setClasses(prev => {
             const updated = {
                 ...prev,
@@ -158,7 +158,7 @@ export default function CreateRegistrationSession({ tracks }: CreateRegistration
         setClasses(prev => {
             const updated = {
                 ...prev,
-                [trackId]: prev[trackId].map(cls => 
+                [trackId]: prev[trackId].map(cls =>
                     cls.id === classId ? { ...cls, [field]: value } : cls
                 )
             };
@@ -182,7 +182,7 @@ export default function CreateRegistrationSession({ tracks }: CreateRegistration
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         // Debug current state
         console.log('=== FORM SUBMISSION DEBUG ===');
         console.log('Form data:', data);
@@ -191,7 +191,7 @@ export default function CreateRegistrationSession({ tracks }: CreateRegistration
         console.log('Selected tracks state:', selectedTracks);
         console.log('Classes state:', classes);
         console.log('=== END DEBUG ===');
-        
+
         // Validate that we have all required data before submitting
         if (!data.name.trim()) {
             toast.error('Please enter a session name');
@@ -234,10 +234,10 @@ export default function CreateRegistrationSession({ tracks }: CreateRegistration
     };
 
     return (
-        <AppLayout>
+        <AppLayout title="Create Registration Session">
             <Head title="Create Registration Session" />
             <Toaster position="top-right" />
-            
+
             <div className="py-12">
                 <div className="mx-auto max-w-4xl sm:px-6 lg:px-8">
                     <div className="overflow-hidden bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg">
@@ -438,7 +438,7 @@ export default function CreateRegistrationSession({ tracks }: CreateRegistration
                                                                         {track.name}
                                                                     </h5>
                                                                     <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                                                        track.is_active 
+                                                                        track.is_active
                                                                             ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                                                                             : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
                                                                     }`}>

@@ -395,6 +395,49 @@ class RegistrationSessionController extends Controller
     }
 
     /**
+     * Add a single student to the registration session.
+     */
+    public function addStudent(Request $request, string $id)
+    {
+        $session = RegistrationSession::findOrFail($id);
+
+        // Convert matric number to uppercase
+        $request->merge([
+            'matric_number' => strtoupper($request->matric_number)
+        ]);
+
+        $request->validate([
+            'matric_number' => [
+                'required',
+                'string',
+                'max:255',
+                'unique:students,matric_number',
+            ],
+        ], [
+            'matric_number.unique' => 'Student with this matric number already exists in the system.',
+        ]);
+
+        // Create student with minimal data - just matric number
+        // Generate a temporary unique identification number to satisfy the constraint
+        $tempIdNumber = 'TEMP_' . time() . '_' . rand(1000, 9999);
+
+        Student::create([
+            'registration_session_id' => $session->id,
+            'matric_number' => $request->matric_number,
+            'name' => '', // Will be filled during registration
+            'identification_number' => '',
+            'gender' => 'Male', // Default value since it's enum
+            'race' => '',
+            'religion' => '',
+            'email' => '',
+            'phone' => '',
+            'is_submitted' => false,
+        ]);
+
+        return back()->with('success', 'Student added successfully.');
+    }
+
+    /**
      * Remove the specified resource from storage.
      */
     public function destroy(string $id)

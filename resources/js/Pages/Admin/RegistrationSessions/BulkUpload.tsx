@@ -61,7 +61,7 @@ export default function BulkUpload({ session, previewData = [], errors = {}, sho
         e.preventDefault();
         e.stopPropagation();
         setDragActive(false);
-        
+
         if (e.dataTransfer.files && e.dataTransfer.files[0]) {
             handleFileSelect(e.dataTransfer.files[0]);
         }
@@ -75,7 +75,7 @@ export default function BulkUpload({ session, previewData = [], errors = {}, sho
 
     const processUpload = () => {
         if (!data.file) return;
-        
+
         post(route('admin.registration-sessions.process-upload', session.id), {
             forceFormData: true,
         });
@@ -85,7 +85,7 @@ export default function BulkUpload({ session, previewData = [], errors = {}, sho
         const validStudentsData = previewData
             .filter(item => !item.has_errors)
             .map(item => item.data);
-        
+
         setData('students_data', validStudentsData);
         post(route('admin.registration-sessions.confirm-upload', session.id));
     };
@@ -94,9 +94,9 @@ export default function BulkUpload({ session, previewData = [], errors = {}, sho
     const validRecordsCount = previewData.filter(item => !item.has_errors).length;
 
     return (
-        <AppLayout>
+        <AppLayout title="Bulk Upload">
             <Head title={`Bulk Upload - ${session.name}`} />
-            
+
             <div className="py-12">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
                     <div className="overflow-hidden bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg">
@@ -161,7 +161,7 @@ export default function BulkUpload({ session, previewData = [], errors = {}, sho
                                         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
                                             Step 2: Upload File
                                         </h2>
-                                        
+
                                         <div
                                             className={`relative border-2 border-dashed rounded-lg p-12 text-center transition-colors ${
                                                 dragActive
@@ -180,14 +180,14 @@ export default function BulkUpload({ session, previewData = [], errors = {}, sho
                                             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
                                                 Supported formats: .csv (Max 2MB)
                                             </p>
-                                            
+
                                             <input
                                                 type="file"
                                                 accept=".csv"
                                                 onChange={handleFileInput}
                                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                             />
-                                            
+
                                             <button
                                                 type="button"
                                                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -196,7 +196,7 @@ export default function BulkUpload({ session, previewData = [], errors = {}, sho
                                                 Choose File
                                             </button>
                                         </div>
-                                        
+
                                         {data.file && (
                                             <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg flex items-center justify-between">
                                                 <div className="flex items-center">
@@ -214,7 +214,7 @@ export default function BulkUpload({ session, previewData = [], errors = {}, sho
                                                 </button>
                                             </div>
                                         )}
-                                        
+
                                         {formErrors.file && (
                                             <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg">
                                                 <p className="text-red-800 dark:text-red-200 text-sm">{formErrors.file}</p>
@@ -231,7 +231,7 @@ export default function BulkUpload({ session, previewData = [], errors = {}, sho
                                             <Eye className="mr-2 h-5 w-5" />
                                             Upload Preview
                                         </h2>
-                                        
+
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                                             <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
                                                 <div className="text-blue-600 dark:text-blue-400 text-2xl font-bold">
@@ -272,7 +272,7 @@ export default function BulkUpload({ session, previewData = [], errors = {}, sho
                                                 </p>
                                             </div>
                                         )}
-                                        
+
                                         <div className="flex gap-4">
                                             <button
                                                 onClick={() => router.visit(route('admin.registration-sessions.bulk-upload', session.id))}
@@ -297,7 +297,7 @@ export default function BulkUpload({ session, previewData = [], errors = {}, sho
                                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                                             Data Preview
                                         </h3>
-                                        
+
                                         <div className="overflow-x-auto">
                                             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                                 <thead className="bg-gray-50 dark:bg-gray-700">
@@ -367,7 +367,7 @@ export default function BulkUpload({ session, previewData = [], errors = {}, sho
                                                             </td>
                                                             <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                                                                 <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                                                    item.data.gender?.toLowerCase() === 'male' 
+                                                                    item.data.gender?.toLowerCase() === 'male'
                                                                         ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
                                                                         : item.data.gender?.toLowerCase() === 'female'
                                                                         ? 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200'

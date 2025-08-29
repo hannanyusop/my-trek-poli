@@ -89,6 +89,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('registration-sessions', RegistrationSessionController::class);
         Route::get('registration-sessions/{registration_session}/projector', [RegistrationSessionController::class, 'projector'])->name('registration-sessions.projector');
         Route::post('registration-sessions/{registration_session}/undo-submission', [RegistrationSessionController::class, 'undoSubmission'])->name('registration-sessions.undo-submission');
+        Route::post('registration-sessions/{registration_session}/add-student', [RegistrationSessionController::class, 'addStudent'])->name('registration-sessions.add-student');
         Route::get('registration-sessions/{registration_session}/export/excel', [RegistrationSessionController::class, 'exportExcel'])->name('registration-sessions.export.excel');
         Route::get('registration-sessions/{registration_session}/export/pdf', [RegistrationSessionController::class, 'exportPdf'])->name('registration-sessions.export.pdf');
         Route::get('registration-sessions/{registration_session}/bulk-upload', [RegistrationSessionController::class, 'bulkUpload'])->name('registration-sessions.bulk-upload');

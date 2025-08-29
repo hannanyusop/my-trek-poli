@@ -1,9 +1,11 @@
 import { Head, Link, router } from '@inertiajs/react';
+import { useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
-import { Calendar, Users, BookOpen, Clock, ArrowLeft, QrCode, ExternalLink, User, Target, Monitor, RotateCcw, FileSpreadsheet, FileText, Download, Upload } from 'lucide-react';
+import { Calendar, Users, BookOpen, Clock, ArrowLeft, QrCode, ExternalLink, User, Target, Monitor, RotateCcw, FileSpreadsheet, FileText, Upload, UserPlus } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { RegistrationSession, Student, Class } from '@/types';
 import { getStatusColor } from '@/lib/utils';
+import AddSingleStudentModal from '@/Components/AddSingleStudentModal';
 
 interface Props {
     session: RegistrationSession;
@@ -13,6 +15,8 @@ interface Props {
 }
 
 export default function Show({ session, classes, students, registrationLink }: Props) {
+    const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
+    
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text);
     };
@@ -26,7 +30,7 @@ export default function Show({ session, classes, students, registrationLink }: P
     };
 
     return (
-        <AppLayout>
+        <AppLayout  title="Registration Session">
             <Head title={`Registration Session  - ${session.name}`} />
 
             <div className="py-12">
@@ -234,6 +238,13 @@ export default function Show({ session, classes, students, registrationLink }: P
                                             </h2>
 
                                             <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={() => setIsAddStudentModalOpen(true)}
+                                                    className="flex items-center px-3 py-2 text-sm font-medium text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900 rounded-md hover:bg-green-200 dark:hover:bg-green-800 transition-colors"
+                                                >
+                                                    <UserPlus className="mr-2 h-4 w-4" />
+                                                    Add Student
+                                                </button>
                                                 <Link
                                                     href={route('admin.registration-sessions.bulk-upload', session.id)}
                                                     className="flex items-center px-3 py-2 text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
@@ -352,6 +363,12 @@ export default function Show({ session, classes, students, registrationLink }: P
                     </div>
                 </div>
             </div>
+
+            <AddSingleStudentModal
+                isOpen={isAddStudentModalOpen}
+                onClose={() => setIsAddStudentModalOpen(false)}
+                sessionId={session.id}
+            />
         </AppLayout>
     );
 }
