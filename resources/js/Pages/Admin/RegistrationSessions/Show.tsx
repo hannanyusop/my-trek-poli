@@ -13,12 +13,29 @@ interface RegistrationSession {
     link_token: string;
 }
 
+interface Track {
+    id: number;
+    name: string;
+    description: string;
+    is_active: boolean;
+}
+
+interface RegistrationSessionTrack {
+    id: number;
+    registration_session_id: number;
+    track_id: number;
+    name: string;
+    description: string;
+    track: Track;
+}
+
 interface Class {
     id: number;
     name: string;
     quota: number;
     current_count: number;
     is_active: boolean;
+    registration_session_track: RegistrationSessionTrack;
 }
 
 interface Student {
@@ -184,6 +201,9 @@ export default function Show({ session, classes, students, registrationLink }: P
                                                                 Class Name
                                                             </th>
                                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                                Track
+                                                            </th>
+                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                                                 Quota Balance
                                                             </th>
                                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -204,6 +224,11 @@ export default function Show({ session, classes, students, registrationLink }: P
                                                                     <td className="px-6 py-4 whitespace-nowrap">
                                                                         <div className="text-sm font-medium text-gray-900 dark:text-white">
                                                                             {classItem.name}
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                                        <div className="text-sm text-gray-900 dark:text-white">
+                                                                            {classItem.registration_session_track.track.name}
                                                                         </div>
                                                                     </td>
                                                                     <td className="px-6 py-4 whitespace-nowrap">

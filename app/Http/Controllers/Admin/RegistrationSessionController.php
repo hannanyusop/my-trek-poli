@@ -61,9 +61,10 @@ class RegistrationSessionController extends Controller
         $session = RegistrationSession::findOrFail($id);
 
         // Get classes related to this registration session through registration_session_tracks
-        $classes = Classes::whereHas('registrationSessionTrack', function ($query) use ($session) {
-            $query->where('registration_session_id', $session->id);
-        })->get();
+        $classes = Classes::with(['registrationSessionTrack.track'])
+            ->whereHas('registrationSessionTrack', function ($query) use ($session) {
+                $query->where('registration_session_id', $session->id);
+            })->get();
 
         // Get students registered for this session
         $students = Student::where('registration_session_id', $session->id)->get();
@@ -88,9 +89,10 @@ class RegistrationSessionController extends Controller
         $session = RegistrationSession::findOrFail($id);
 
         // Get classes with live counts
-        $classes = Classes::whereHas('registrationSessionTrack', function ($query) use ($session) {
-            $query->where('registration_session_id', $session->id);
-        })->get();
+        $classes = Classes::with(['registrationSessionTrack.track'])
+            ->whereHas('registrationSessionTrack', function ($query) use ($session) {
+                $query->where('registration_session_id', $session->id);
+            })->get();
 
         // Get total student count for this session
         $totalStudents = Student::where('registration_session_id', $session->id)->count();
