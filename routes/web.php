@@ -38,6 +38,7 @@ Route::middleware('auth')->group(function () {
     // Main Navigation Routes
     Route::get('/semester-registration', function () {
         return Inertia::render('SemesterRegistration', [
+            'registrationSessions' => \App\Models\RegistrationSession::orderBy('created_at', 'desc')->get(),
             'tracks' => \App\Models\Track::all(),
             'availableTracks' => \App\Models\Track::where('is_active', true)->get(),
         ]);
