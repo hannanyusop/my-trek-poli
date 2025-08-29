@@ -19,17 +19,18 @@ class StudentRegistrationController extends Controller
 {
     public function show(Request $request, string $token): Response|RedirectResponse
     {
-        $registrationSession = RegistrationSession::where('link_token', $token)->firstOrFail();
+        $registrationSession = RegistrationSession::where('link_token', $token)
+            ->firstOrFail();
 
         // Check if matric_number is provided in query parameters
         $matricNumber = $request->query('matric_number');
+
         if ($matricNumber) {
             // Check if student exists with the provided matric number and correct session ID
             $student = Student::where('matric_number', $matricNumber)
                 ->where('registration_session_id', $registrationSession->id)
                 ->first();
 
-            // If student doesn't exist, return error message
             if (! $student) {
                 return Inertia::render('StudentRegistration/Show', [
                     'registrationSession' => $registrationSession,
@@ -37,7 +38,6 @@ class StudentRegistrationController extends Controller
                 ]);
             }
 
-            // If student exists and is submitted, redirect to summary
             if ($student->is_submitted) {
                 return redirect()->route('student.registration.summary', [
                     'token' => $token,
@@ -45,7 +45,6 @@ class StudentRegistrationController extends Controller
                 ]);
             }
 
-            // If student exists but not submitted, redirect to form with student data
             return redirect()->route('student.registration.form', $token)->with('student_data', $student);
         }
 
@@ -57,6 +56,7 @@ class StudentRegistrationController extends Controller
     public function showForm(string $token): Response
     {
         $registrationSession = RegistrationSession::where('link_token', $token)->firstOrFail();
+
         $tracks = RegistrationSessionTrack::where('registration_session_id', $registrationSession->id)->with('track')->get();
         $races = Race::where('is_active', true)->orderBy('name')->get();
         $religions = Religion::where('is_active', true)->orderBy('name')->get();
@@ -108,17 +108,25 @@ class StudentRegistrationController extends Controller
 
     public function storeStudent(StudentRegistrationRequest $request, string $token): RedirectResponse
     {
-        $registrationSession = RegistrationSession::where('link_token', $token)->first();
+        $registrationSession = RegistrationSession::where('link_token', $token)->firstOrFail();
+
+        $existingStudent = Student::where('matric_number', $request->matric_number)
+            ->where('registration_session_id', $registrationSession->id)
+            ->first();
+
+        if (!$existingStudent) {
+            return redirect()->route('student.registration.show', $token)
+                ->withErrors(['matric_number' => 'Student not found. Please ask assistance from admin.']);
+        }
+
         $validatedData = $request->validated();
         unset($validatedData['matric_number']);
 
-        $student = Student::updateOrCreate(
-            [
-                'registration_session_id' => $registrationSession->id,
-                'matric_number' => $request->matric_number,
-            ],
-            $validatedData
-        );
+        $student = Student::where('registration_session_id', $registrationSession->id)
+            ->where('matric_number', $request->matric_number)
+            ->firstOrFail();
+
+        $student->update($validatedData);
 
         session(['student_id' => $student->id]);
 

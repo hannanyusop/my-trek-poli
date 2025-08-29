@@ -27,7 +27,7 @@ interface Props {
 
 export default function Form({ registrationSession, student, tracks, races, religions }: Props) {
     const storageKey = `student_data_${registrationSession.link_token}`;
-    
+
     // Load data from localStorage or use provided student data
     const getInitialData = () => {
         if (typeof window !== 'undefined') {
@@ -91,7 +91,7 @@ export default function Form({ registrationSession, student, tracks, races, reli
                 phone: student.phone || '',
             };
             localStorage.setItem(storageKey, JSON.stringify(studentData));
-            
+
             // Update form data with student info
             setData({
                 matric_number: studentData.matric_number,
@@ -131,7 +131,33 @@ export default function Form({ registrationSession, student, tracks, races, reli
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
-        post(route('student.registration.store.student', registrationSession.link_token));
+
+        // Ensure matric_number is available from localStorage or form data
+        let matricNumber = data.matric_number;
+        if (!matricNumber && typeof window !== 'undefined') {
+            const stored = localStorage.getItem(storageKey);
+            if (stored) {
+                try {
+                    const studentData = JSON.parse(stored);
+                    matricNumber = studentData.matric_number;
+                } catch (e) {
+                    // localStorage data is corrupted, handle gracefully
+                }
+            }
+        }
+
+        if (!matricNumber) {
+            toast.error('Matric number is required');
+            return;
+        }
+
+        // Include matric_number as a required parameter in the form data
+        post(route('student.registration.store.student', registrationSession.link_token), {
+            data: {
+                ...data,
+                matric_number: matricNumber
+            }
+        });
     };
 
     const handleLogout = () => {
@@ -149,7 +175,7 @@ export default function Form({ registrationSession, student, tracks, races, reli
 
             <div className="max-w-4xl mx-auto">
                 <StepIndicator currentStep={0} className="mb-12" />
-                
+
                 <div className="bg-white dark:bg-gray-800 shadow-xl rounded-2xl px-8 py-10 border border-gray-100 dark:border-gray-700">
                     <div className="text-center mb-8">
                         <div className="mx-auto h-16 w-16 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mb-4">
@@ -162,17 +188,6 @@ export default function Form({ registrationSession, student, tracks, races, reli
                             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
                                 Student Information
                             </h1>
-                            <div className="flex-1 flex justify-end">
-                                {(student || data.matric_number) && (
-                                    <button
-                                        onClick={handleLogout}
-                                        className="text-sm text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 transition-colors"
-                                        title="Clear student data and start over"
-                                    >
-                                        Clear & Start Over
-                                    </button>
-                                )}
-                            </div>
                         </div>
                         <p className="text-gray-600 dark:text-gray-300">
                             {student ? 'Update your information and proceed to track selection' : 'Please provide your information to continue'}
@@ -189,6 +204,7 @@ export default function Form({ registrationSession, student, tracks, races, reli
                                     id="matric_number"
                                     name="matric_number"
                                     type="text"
+                                    disabled={true}
                                     required
                                     className={`block w-full px-4 py-2.5 border rounded-lg transition-colors duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
                                         errors.matric_number
@@ -394,7 +410,7 @@ export default function Form({ registrationSession, student, tracks, races, reli
                                 onClick={handleLogout}
                                 className="px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
                             >
-                                Clear Form
+                                Logout
                             </button>
                             <button
                                 type="submit"

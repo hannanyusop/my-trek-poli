@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { useEffect } from 'react';
 
 interface RegistrationSession {
@@ -63,6 +63,16 @@ export default function Success({ registrationSession, student, preferences, pla
             localStorage.setItem(submissionKey, 'true');
         }
     }, [registrationSession.link_token]);
+
+    const handleBackToRegister = () => {
+        if (typeof window !== 'undefined') {
+            const storageKey = `student_data_${registrationSession.link_token}`;
+            const submissionKey = `student_submitted_${registrationSession.link_token}`;
+            localStorage.removeItem(storageKey);
+            localStorage.removeItem(submissionKey);
+        }
+        router.visit(`/register/${registrationSession.link_token}`);
+    };
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleString('en-MY', {
@@ -286,6 +296,16 @@ export default function Success({ registrationSession, student, preferences, pla
 
                     {/* Actions */}
                     <div className="space-y-4">
+                        <button
+                            onClick={handleBackToRegister}
+                            className="w-full flex justify-center items-center py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        >
+                            <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                            </svg>
+                            Back to Register
+                        </button>
+
                         <div className="flex items-center justify-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
                             <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />

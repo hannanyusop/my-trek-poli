@@ -30,15 +30,9 @@ test('registration flow shows step indicators correctly', function () {
         ->has('registrationSession')
     );
 
-    // Test Step 1: Student information form (now first step)
+    // Test Step 1: Student information form requires valid matric lookup first
     $response = $this->get(route('student.registration.form', $registrationSession->link_token));
-    $response->assertOk();
-    $response->assertInertia(fn ($assert) => $assert
-        ->component('StudentRegistration/Form')
-        ->has('registrationSession')
-        ->has('races')
-        ->has('religions')
-    );
+    $response->assertRedirect(route('student.registration.show', $registrationSession->link_token));
 });
 
 test('new three step registration flow works correctly', function () {

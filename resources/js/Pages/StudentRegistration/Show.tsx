@@ -16,9 +16,10 @@ interface RegistrationSession {
 
 interface Props {
     registrationSession: RegistrationSession;
+    error?: string;
 }
 
-export default function Show({ registrationSession }: Props) {
+export default function Show({ registrationSession, error }: Props) {
     const { data, setData, post, processing, errors } = useForm({
         matric_number: '',
     });
@@ -58,12 +59,8 @@ export default function Show({ registrationSession }: Props) {
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
         if (data.matric_number.trim()) {
-            // Store matric number and redirect to form
-            if (typeof window !== 'undefined') {
-                const studentData = { matric_number: data.matric_number.trim() };
-                localStorage.setItem(storageKey, JSON.stringify(studentData));
-            }
-            router.visit(route('student.registration.form', registrationSession.link_token));
+            // Use the backend lookup endpoint instead of direct form access
+            post(route('student.registration.lookup', registrationSession.link_token));
         }
     };
 
@@ -104,7 +101,7 @@ export default function Show({ registrationSession }: Props) {
                                 autoComplete="off"
                                 required
                                 className={`block w-full px-4 py-3 border rounded-lg transition-colors duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
-                                    errors.matric_number
+                                    (errors.matric_number || error)
                                         ? 'border-red-300 dark:border-red-600 focus:ring-red-500'
                                         : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
                                 }`}
@@ -112,12 +109,12 @@ export default function Show({ registrationSession }: Props) {
                                 value={data.matric_number}
                                 onChange={(e) => setData('matric_number', e.target.value.toUpperCase())}
                             />
-                            {errors.matric_number && (
+                            {(errors.matric_number || error) && (
                                 <p className="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center">
                                     <svg className="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
                                         <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                                     </svg>
-                                    {errors.matric_number}
+                                    {errors.matric_number || error}
                                 </p>
                             )}
                         </div>
