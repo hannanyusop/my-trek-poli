@@ -1,7 +1,7 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
-import { ArrowLeft, AlertCircle, CheckCircle, AlertTriangle, Users, BarChart3, Trash2 } from 'lucide-react';
+import { ArrowLeft, AlertCircle, CheckCircle, AlertTriangle, Users, BarChart3, Trash2, Search, X } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 interface Class {
@@ -56,20 +56,38 @@ interface Props {
 export default function Placement({ session, students, classes, stats }: Props) {
     const [viewMode, setViewMode] = useState<'by-status' | 'by-class'>('by-status');
     const [filter, setFilter] = useState<string>('all');
+    const [searchName, setSearchName] = useState<string>('');
+    const [searchMatric, setSearchMatric] = useState<string>('');
+    const [searchGender, setSearchGender] = useState<string>('');
+    const [searchRace, setSearchRace] = useState<string>('');
 
     const filteredStudents = students.filter(student => {
         if (filter === 'all') return true;
         return student.placement_status === filter;
     });
 
+    // Filter function for By Class view
+    const filterStudentBySearch = (student: Student) => {
+        const matchesName = searchName === '' || student.name.toLowerCase().includes(searchName.toLowerCase());
+        const matchesMatric = searchMatric === '' || student.matric_number.toLowerCase().includes(searchMatric.toLowerCase());
+        const matchesGender = searchGender === '' || student.gender.toLowerCase() === searchGender.toLowerCase();
+        const matchesRace = searchRace === '' || student.race.toLowerCase().includes(searchRace.toLowerCase());
+
+        return matchesName && matchesMatric && matchesGender && matchesRace;
+    };
+
     // Group students by class
     const studentsByClass = classes.map(cls => ({
         class: cls,
-        students: students.filter(s => s.assigned_class?.id === cls.id)
+        students: students.filter(s => s.assigned_class?.id === cls.id).filter(filterStudentBySearch)
     }));
 
     // Unassigned students
-    const unassignedStudents = students.filter(s => !s.assigned_class);
+    const unassignedStudents = students.filter(s => !s.assigned_class).filter(filterStudentBySearch);
+
+    // Get unique genders and races for dropdowns
+    const uniqueGenders = Array.from(new Set(students.map(s => s.gender)));
+    const uniqueRaces = Array.from(new Set(students.map(s => s.race)));
 
     const handleReassign = (studentId: number, studentName: string, currentClassId?: number) => {
         const classOptions = classes.map(c => `<option value="${c.id}" ${currentClassId === c.id ? 'selected' : ''}>${c.name} (${c.track}) - ${c.available_slots} slots left</option>`).join('');
@@ -346,6 +364,92 @@ export default function Placement({ session, students, classes, stats }: Props) 
                     {/* By Class View */}
                     {viewMode === 'by-class' && (
                         <div className="space-y-6">
+                            {/* Search Filters */}
+                            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <Search className="h-5 w-5 text-gray-400" />
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Search Students</h3>
+                                    {(searchName || searchMatric || searchGender || searchRace) && (
+                                        <button
+                                            onClick={() => {
+                                                setSearchName('');
+                                                setSearchMatric('');
+                                                setSearchGender('');
+                                                setSearchRace('');
+                                            }}
+                                            className="ml-auto flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                        >
+                                            <X className="h-4 w-4" />
+                                            Clear All
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                    <div>
+                                        <label htmlFor="search-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            Name
+                                        </label>
+                                        <input
+                                            id="search-name"
+                                            type="text"
+                                            value={searchName}
+                                            onChange={(e) => setSearchName(e.target.value)}
+                                            placeholder="Search by name..."
+                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label htmlFor="search-matric" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            Matric Number
+                                        </label>
+                                        <input
+                                            id="search-matric"
+                                            type="text"
+                                            value={searchMatric}
+                                            onChange={(e) => setSearchMatric(e.target.value)}
+                                            placeholder="Search by matric..."
+                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label htmlFor="search-gender" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            Gender
+                                        </label>
+                                        <select
+                                            id="search-gender"
+                                            value={searchGender}
+                                            onChange={(e) => setSearchGender(e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        >
+                                            <option value="">All Genders</option>
+                                            {uniqueGenders.map((gender) => (
+                                                <option key={gender} value={gender}>
+                                                    {gender}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label htmlFor="search-race" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            Race
+                                        </label>
+                                        <select
+                                            id="search-race"
+                                            value={searchRace}
+                                            onChange={(e) => setSearchRace(e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        >
+                                            <option value="">All Races</option>
+                                            {uniqueRaces.map((race) => (
+                                                <option key={race} value={race}>
+                                                    {race}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
                             {/* Assigned Students by Class */}
                             {studentsByClass.map(({ class: cls, students: classStudents }) => (
                                 <div key={cls.id} className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
