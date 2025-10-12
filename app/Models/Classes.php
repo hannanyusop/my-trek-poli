@@ -30,9 +30,14 @@ class Classes extends Model
         return $this->belongsTo(RegistrationSessionTrack::class);
     }
 
-    public function students(): HasMany
+    public function placements(): HasMany
     {
-        return $this->hasMany(Student::class, 'assigned_class_id');
+        return $this->hasMany(Placement::class, 'assigned_class_id');
+    }
+
+    public function activePlacements(): HasMany
+    {
+        return $this->hasMany(Placement::class, 'assigned_class_id')->where('is_active', true);
     }
 
     public function placementLogs(): HasMany

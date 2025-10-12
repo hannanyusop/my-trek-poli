@@ -23,6 +23,7 @@ interface Student {
     race: string;
     placement_status: string;
     placement_notes?: string;
+    track_priority?: number | null;
     assigned_class?: {
         id: number;
         name: string;
@@ -169,6 +170,22 @@ export default function Placement({ session, students, classes, stats }: Props) 
             pending: <AlertTriangle className="h-4 w-4" />
         };
         return icons[status as keyof typeof icons] || icons.pending;
+    };
+
+    const getPriorityLabel = (priority?: number | null) => {
+        if (!priority) return null;
+        const ordinals = ['', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th'];
+        return ordinals[priority] || `${priority}th`;
+    };
+
+    const getPriorityBadge = (priority?: number | null) => {
+        if (!priority) return null;
+        const badges: Record<number, string> = {
+            1: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+            2: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+            3: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+        };
+        return badges[priority] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
     };
 
     return (
@@ -324,7 +341,14 @@ export default function Placement({ session, students, classes, stats }: Props) 
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                                                     {student.assigned_class ? (
                                                         <div>
-                                                            <div className="font-medium text-gray-900 dark:text-white">{student.assigned_class.name}</div>
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="font-medium text-gray-900 dark:text-white">{student.assigned_class.name}</div>
+                                                                {student.track_priority && (
+                                                                    <span className={`px-2 py-0.5 text-xs font-semibold rounded ${getPriorityBadge(student.track_priority)}`}>
+                                                                        {getPriorityLabel(student.track_priority)} Choice
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                             <div className="text-gray-500 dark:text-gray-400">{student.assigned_class.registration_session_track.track.name}</div>
                                                         </div>
                                                     ) : (
@@ -487,6 +511,7 @@ export default function Placement({ session, students, classes, stats }: Props) 
                                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Matric</th>
                                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Gender</th>
                                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Race</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Priority</th>
                                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
                                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Actions</th>
                                                     </tr>
@@ -498,6 +523,15 @@ export default function Placement({ session, students, classes, stats }: Props) 
                                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{student.matric_number}</td>
                                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{student.gender}</td>
                                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{student.race}</td>
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                                                {student.track_priority ? (
+                                                                    <span className={`px-2 py-0.5 text-xs font-semibold rounded ${getPriorityBadge(student.track_priority)}`}>
+                                                                        {getPriorityLabel(student.track_priority)} Choice
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="text-gray-400 dark:text-gray-500">-</span>
+                                                                )}
+                                                            </td>
                                                             <td className="px-6 py-4 whitespace-nowrap">
                                                                 <span className={`px-2 py-1 text-xs font-medium rounded-full flex items-center gap-1 w-fit ${getStatusBadge(student.placement_status)}`}>
                                                                     {getStatusIcon(student.placement_status)}

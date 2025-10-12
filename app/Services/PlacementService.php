@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Classes;
+use App\Models\Placement;
 use App\Models\PlacementLog;
 use App\Models\RegistrationSession;
 use App\Models\Student;
@@ -159,11 +160,21 @@ class PlacementService
 
     private function assignStudentToClass(Student $student, Classes $class, int $priority, int $sessionId): void
     {
-        // Update student
-        $student->update([
+        // Deactivate any existing active placement
+        Placement::where('student_id', $student->id)
+            ->where('is_active', true)
+            ->update(['is_active' => false]);
+
+        // Create new placement
+        $placement = Placement::create([
+            'student_id' => $student->id,
             'assigned_class_id' => $class->id,
             'placement_status' => 'placed',
             'placement_notes' => null,
+            'track_priority' => $priority,
+            'assigned_by' => 'system',
+            'assigned_at' => now(),
+            'is_active' => true,
         ]);
 
         // Update class distribution tracking
@@ -179,6 +190,7 @@ class PlacementService
 
         // Log the placement
         PlacementLog::create([
+            'placement_id' => $placement->id,
             'registration_session_id' => $sessionId,
             'student_id' => $student->id,
             'class_id' => $class->id,
@@ -191,12 +203,25 @@ class PlacementService
 
     private function flagStudent(Student $student, string $reason, int $sessionId): void
     {
-        $student->update([
+        // Deactivate any existing active placement
+        Placement::where('student_id', $student->id)
+            ->where('is_active', true)
+            ->update(['is_active' => false]);
+
+        // Create flagged placement
+        $placement = Placement::create([
+            'student_id' => $student->id,
+            'assigned_class_id' => null,
             'placement_status' => 'flagged',
             'placement_notes' => $reason,
+            'track_priority' => null,
+            'assigned_by' => 'system',
+            'assigned_at' => now(),
+            'is_active' => true,
         ]);
 
         PlacementLog::create([
+            'placement_id' => $placement->id,
             'registration_session_id' => $sessionId,
             'student_id' => $student->id,
             'action' => 'flagged',

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\RegistrationSessionStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Classes;
+use App\Models\Placement;
 use App\Models\PlacementLog;
 use App\Models\RegistrationSession;
 use App\Models\Student;
@@ -20,30 +21,62 @@ class PlacementController extends Controller
     {
         $session = RegistrationSession::findOrFail($sessionId);
 
-        // Get all students with their assigned classes and placement info
+        // Get all students with their placements
         $students = Student::where('registration_session_id', $sessionId)
             ->where('is_submitted', true)
-            ->with(['assignedClass.registrationSessionTrack.track', 'preferences.registrationSessionTrack.track'])
-            ->orderBy('placement_status')
+            ->with(['activePlacement.assignedClass.registrationSessionTrack.track', 'preferences.registrationSessionTrack.track'])
             ->orderBy('name')
-            ->get();
+            ->get()
+            ->map(function ($student) {
+                $placement = $student->activePlacement;
+
+                return [
+                    'id' => $student->id,
+                    'name' => $student->name,
+                    'matric_number' => $student->matric_number,
+                    'gender' => $student->gender,
+                    'race' => $student->race,
+                    'placement_status' => $placement?->placement_status ?? 'pending',
+                    'placement_notes' => $placement?->placement_notes,
+                    'track_priority' => $placement?->track_priority,
+                    'assigned_class' => $placement && $placement->assignedClass ? [
+                        'id' => $placement->assignedClass->id,
+                        'name' => $placement->assignedClass->name,
+                        'registration_session_track' => [
+                            'track' => [
+                                'name' => $placement->assignedClass->registrationSessionTrack->track->name,
+                            ],
+                        ],
+                    ] : null,
+                ];
+            })
+            ->sortBy(fn ($s) => match ($s['placement_status']) {
+                'pending' => 0,
+                'flagged' => 1,
+                'placed' => 2,
+                'manually_assigned' => 3,
+                default => 4,
+            })
+            ->values();
 
         // Get all classes with distribution metrics
         $classes = Classes::whereHas('registrationSessionTrack', function ($query) use ($sessionId) {
             $query->where('registration_session_id', $sessionId);
         })
-            ->with(['registrationSessionTrack.track', 'students'])
+            ->with(['registrationSessionTrack.track', 'activePlacements.student'])
             ->get()
             ->map(function ($class) {
+                $placedStudents = $class->activePlacements->pluck('student');
+
                 return [
                     'id' => $class->id,
                     'name' => $class->name,
                     'track' => $class->registrationSessionTrack->track->name,
                     'quota' => $class->quota,
-                    'assigned_count' => $class->students->count(),
-                    'available_slots' => $class->quota - $class->students->count(),
-                    'gender_distribution' => $class->students->countBy('gender'),
-                    'race_distribution' => $class->students->countBy('race'),
+                    'assigned_count' => $placedStudents->count(),
+                    'available_slots' => $class->quota - $placedStudents->count(),
+                    'gender_distribution' => $placedStudents->countBy('gender'),
+                    'race_distribution' => $placedStudents->countBy('race'),
                 ];
             });
 
@@ -76,30 +109,52 @@ class PlacementController extends Controller
         $session = RegistrationSession::findOrFail($sessionId);
         $student = Student::where('id', $studentId)
             ->where('registration_session_id', $sessionId)
+            ->with(['preferences.registrationSessionTrack', 'activePlacement'])
             ->firstOrFail();
 
-        $newClass = Classes::findOrFail($request->class_id);
+        $newClass = Classes::with('registrationSessionTrack')->findOrFail($request->class_id);
 
         // Check if class has capacity
-        $assignedCount = Student::where('assigned_class_id', $newClass->id)->count();
+        $assignedCount = Placement::where('assigned_class_id', $newClass->id)
+            ->where('is_active', true)
+            ->count();
         if ($assignedCount >= $newClass->quota) {
             return back()->withErrors(['class' => 'Selected class is at full capacity.']);
         }
 
-        $previousClassId = $student->assigned_class_id;
+        $previousPlacement = $student->activePlacement;
+        $previousClassId = $previousPlacement?->assigned_class_id;
 
-        // Update student assignment
-        $student->update([
+        // Calculate track priority
+        $assignedTrackId = $newClass->registrationSessionTrack->track_id;
+        $preference = $student->preferences->firstWhere('registrationSessionTrack.track_id', $assignedTrackId);
+        $trackPriority = $preference?->priority;
+
+        // Deactivate previous placement if exists
+        if ($previousPlacement) {
+            $previousPlacement->update(['is_active' => false]);
+        }
+
+        // Create new placement
+        $placement = Placement::create([
+            'student_id' => $student->id,
             'assigned_class_id' => $newClass->id,
             'placement_status' => 'manually_assigned',
             'placement_notes' => 'Manually assigned by admin',
+            'track_priority' => $trackPriority,
+            'assigned_by' => 'admin',
+            'admin_id' => auth()->id(),
+            'assigned_at' => now(),
+            'is_active' => true,
         ]);
 
         // Log the change
         PlacementLog::create([
+            'placement_id' => $placement->id,
             'registration_session_id' => $sessionId,
             'student_id' => $student->id,
             'class_id' => $newClass->id,
+            'track_priority' => $trackPriority,
             'previous_class_id' => $previousClassId,
             'action' => 'manual_assigned',
             'performed_by_user_id' => auth()->id(),
@@ -121,32 +176,39 @@ class PlacementController extends Controller
 
         $student1 = Student::where('id', $request->student1_id)
             ->where('registration_session_id', $sessionId)
+            ->with('activePlacement')
             ->firstOrFail();
 
         $student2 = Student::where('id', $request->student2_id)
             ->where('registration_session_id', $sessionId)
+            ->with('activePlacement')
             ->firstOrFail();
 
-        if (! $student1->assigned_class_id || ! $student2->assigned_class_id) {
+        $placement1 = $student1->activePlacement;
+        $placement2 = $student2->activePlacement;
+
+        if (! $placement1 || ! $placement2 || ! $placement1->assigned_class_id || ! $placement2->assigned_class_id) {
             return back()->withErrors(['swap' => 'Both students must be assigned to classes before swapping.']);
         }
 
         // Swap the classes
-        $class1 = $student1->assigned_class_id;
-        $class2 = $student2->assigned_class_id;
+        $class1 = $placement1->assigned_class_id;
+        $class2 = $placement2->assigned_class_id;
 
-        $student1->update([
+        // Update placements
+        $placement1->update([
             'assigned_class_id' => $class2,
             'placement_status' => 'manually_assigned',
         ]);
 
-        $student2->update([
+        $placement2->update([
             'assigned_class_id' => $class1,
             'placement_status' => 'manually_assigned',
         ]);
 
         // Log both swaps
         PlacementLog::create([
+            'placement_id' => $placement1->id,
             'registration_session_id' => $sessionId,
             'student_id' => $student1->id,
             'class_id' => $class2,
@@ -157,6 +219,7 @@ class PlacementController extends Controller
         ]);
 
         PlacementLog::create([
+            'placement_id' => $placement2->id,
             'registration_session_id' => $sessionId,
             'student_id' => $student2->id,
             'class_id' => $class1,
@@ -176,13 +239,12 @@ class PlacementController extends Controller
     {
         $session = RegistrationSession::findOrFail($sessionId);
 
-        // Clear all student assignments
-        Student::where('registration_session_id', $sessionId)
-            ->update([
-                'assigned_class_id' => null,
-                'placement_status' => 'pending',
-                'placement_notes' => null,
-            ]);
+        // Deactivate all active placements for this session
+        Placement::whereHas('student', function ($query) use ($sessionId) {
+            $query->where('registration_session_id', $sessionId);
+        })
+            ->where('is_active', true)
+            ->update(['is_active' => false]);
 
         // Log the clear action
         PlacementLog::create([

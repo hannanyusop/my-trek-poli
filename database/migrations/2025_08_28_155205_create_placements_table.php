@@ -14,11 +14,13 @@ return new class extends Migration
         Schema::create('placements', function (Blueprint $table) {
             $table->id();
             $table->foreignId('student_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('class_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('assigned_class_id')->nullable()->constrained('classes')->nullOnDelete();
+            $table->enum('placement_status', ['pending', 'placed', 'flagged', 'manually_assigned'])->default('pending');
+            $table->text('placement_notes')->nullable();
+            $table->integer('track_priority')->nullable()->comment('Which priority was used: 1, 2, or 3');
             $table->enum('assigned_by', ['system', 'admin'])->default('system');
             $table->foreignId('admin_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->timestamp('assigned_at');
-            $table->text('reason');
+            $table->timestamp('assigned_at')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
 

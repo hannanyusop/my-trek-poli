@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Student extends Model
 {
@@ -20,9 +21,6 @@ class Student extends Model
         'phone',
         'submitted_at',
         'is_submitted',
-        'assigned_class_id',
-        'placement_status',
-        'placement_notes',
     ];
 
     protected function casts(): array
@@ -43,9 +41,14 @@ class Student extends Model
         return $this->hasMany(StudentPreference::class);
     }
 
-    public function assignedClass(): BelongsTo
+    public function placements(): HasMany
     {
-        return $this->belongsTo(Classes::class, 'assigned_class_id');
+        return $this->hasMany(Placement::class);
+    }
+
+    public function activePlacement(): HasOne
+    {
+        return $this->hasOne(Placement::class)->where('is_active', true);
     }
 
     public function placementLogs(): HasMany

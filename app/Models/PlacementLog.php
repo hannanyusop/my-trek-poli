@@ -9,16 +9,15 @@ class PlacementLog extends Model
 {
     const UPDATED_AT = null;
 
-    protected $table = 'placement_audit_logs';
-
     protected $fillable = [
+        'placement_id',
         'registration_session_id',
         'student_id',
         'class_id',
+        'previous_class_id',
         'track_priority',
         'action',
         'performed_by_user_id',
-        'previous_class_id',
         'notes',
         'balance_metrics',
     ];
@@ -30,6 +29,11 @@ class PlacementLog extends Model
             'track_priority' => 'integer',
             'created_at' => 'datetime',
         ];
+    }
+
+    public function placement(): BelongsTo
+    {
+        return $this->belongsTo(Placement::class);
     }
 
     public function registrationSession(): BelongsTo
