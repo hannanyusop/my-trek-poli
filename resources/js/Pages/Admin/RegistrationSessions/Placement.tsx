@@ -54,12 +54,22 @@ interface Props {
 }
 
 export default function Placement({ session, students, classes, stats }: Props) {
+    const [viewMode, setViewMode] = useState<'by-status' | 'by-class'>('by-status');
     const [filter, setFilter] = useState<string>('all');
 
     const filteredStudents = students.filter(student => {
         if (filter === 'all') return true;
         return student.placement_status === filter;
     });
+
+    // Group students by class
+    const studentsByClass = classes.map(cls => ({
+        class: cls,
+        students: students.filter(s => s.assigned_class?.id === cls.id)
+    }));
+
+    // Unassigned students
+    const unassignedStudents = students.filter(s => !s.assigned_class);
 
     const handleReassign = (studentId: number, studentName: string, currentClassId?: number) => {
         const classOptions = classes.map(c => `<option value="${c.id}" ${currentClassId === c.id ? 'selected' : ''}>${c.name} (${c.track}) - ${c.available_slots} slots left</option>`).join('');
@@ -223,85 +233,260 @@ export default function Placement({ session, students, classes, stats }: Props) 
                         </div>
                     </div>
 
-                    {/* Filter Tabs */}
+                    {/* View Mode Toggle */}
                     <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow">
                         <div className="flex border-b border-gray-200 dark:border-gray-700">
-                            {['all', 'placed', 'manually_assigned', 'flagged', 'pending'].map((status) => (
-                                <button
-                                    key={status}
-                                    onClick={() => setFilter(status)}
-                                    className={`px-6 py-3 text-sm font-medium transition-colors ${
-                                        filter === status
-                                            ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
-                                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                                    }`}
-                                >
-                                    {status.replace('_', ' ').charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}
-                                </button>
-                            ))}
+                            <button
+                                onClick={() => setViewMode('by-status')}
+                                className={`px-6 py-3 text-sm font-medium transition-colors ${
+                                    viewMode === 'by-status'
+                                        ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
+                                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                                }`}
+                            >
+                                By Status
+                            </button>
+                            <button
+                                onClick={() => setViewMode('by-class')}
+                                className={`px-6 py-3 text-sm font-medium transition-colors ${
+                                    viewMode === 'by-class'
+                                        ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
+                                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                                }`}
+                            >
+                                By Class
+                            </button>
                         </div>
                     </div>
 
-                    {/* Students Table */}
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                                <thead className="bg-gray-50 dark:bg-gray-700">
-                                    <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Name</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Matric</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Gender</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Race</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Assigned Class</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                    {filteredStudents.map((student) => (
-                                        <tr key={student.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{student.name}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{student.matric_number}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{student.gender}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{student.race}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                                {student.assigned_class ? (
-                                                    <div>
-                                                        <div className="font-medium text-gray-900 dark:text-white">{student.assigned_class.name}</div>
-                                                        <div className="text-gray-500 dark:text-gray-400">{student.assigned_class.registration_session_track.track.name}</div>
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-gray-400 dark:text-gray-500">Not assigned</span>
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`px-2 py-1 text-xs font-medium rounded-full flex items-center gap-1 w-fit ${getStatusBadge(student.placement_status)}`}>
-                                                    {getStatusIcon(student.placement_status)}
-                                                    {student.placement_status.replace('_', ' ')}
-                                                </span>
-                                                {student.placement_notes && (
-                                                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{student.placement_notes}</p>
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                                <button
-                                                    onClick={() => handleReassign(student.id, student.name, student.assigned_class?.id)}
-                                                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                                >
-                                                    Reassign
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                        {filteredStudents.length === 0 && (
-                            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                                No students found with this filter.
+                    {/* Filter Tabs - Only show for By Status view */}
+                    {viewMode === 'by-status' && (
+                        <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow">
+                            <div className="flex border-b border-gray-200 dark:border-gray-700">
+                                {['all', 'placed', 'manually_assigned', 'flagged', 'pending'].map((status) => (
+                                    <button
+                                        key={status}
+                                        onClick={() => setFilter(status)}
+                                        className={`px-6 py-3 text-sm font-medium transition-colors ${
+                                            filter === status
+                                                ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
+                                                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                                        }`}
+                                    >
+                                        {status.replace('_', ' ').charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}
+                                    </button>
+                                ))}
                             </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
+
+                    {/* Students Table - By Status View */}
+                    {viewMode === 'by-status' && (
+                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                    <thead className="bg-gray-50 dark:bg-gray-700">
+                                        <tr>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Name</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Matric</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Gender</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Race</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Assigned Class</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                        {filteredStudents.map((student) => (
+                                            <tr key={student.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{student.name}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{student.matric_number}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{student.gender}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{student.race}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                                    {student.assigned_class ? (
+                                                        <div>
+                                                            <div className="font-medium text-gray-900 dark:text-white">{student.assigned_class.name}</div>
+                                                            <div className="text-gray-500 dark:text-gray-400">{student.assigned_class.registration_session_track.track.name}</div>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-gray-400 dark:text-gray-500">Not assigned</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <span className={`px-2 py-1 text-xs font-medium rounded-full flex items-center gap-1 w-fit ${getStatusBadge(student.placement_status)}`}>
+                                                        {getStatusIcon(student.placement_status)}
+                                                        {student.placement_status.replace('_', ' ')}
+                                                    </span>
+                                                    {student.placement_notes && (
+                                                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{student.placement_notes}</p>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                                    <button
+                                                        onClick={() => handleReassign(student.id, student.name, student.assigned_class?.id)}
+                                                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                    >
+                                                        Reassign
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {filteredStudents.length === 0 && (
+                                <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                                    No students found with this filter.
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* By Class View */}
+                    {viewMode === 'by-class' && (
+                        <div className="space-y-6">
+                            {/* Assigned Students by Class */}
+                            {studentsByClass.map(({ class: cls, students: classStudents }) => (
+                                <div key={cls.id} className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+                                    {/* Class Header */}
+                                    <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-b border-gray-200 dark:border-gray-600">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{cls.name}</h3>
+                                                <p className="text-sm text-gray-600 dark:text-gray-400">{cls.track}</p>
+                                            </div>
+                                            <div className="flex items-center gap-4">
+                                                <div className="text-sm">
+                                                    <span className="text-gray-600 dark:text-gray-400">Students: </span>
+                                                    <span className="font-semibold text-gray-900 dark:text-white">
+                                                        {classStudents.length} / {cls.quota}
+                                                    </span>
+                                                </div>
+                                                <div className="text-sm">
+                                                    <span className="text-gray-600 dark:text-gray-400">Available: </span>
+                                                    <span className={`font-semibold ${cls.available_slots > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                        {cls.available_slots}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Students in Class */}
+                                    {classStudents.length > 0 ? (
+                                        <div className="overflow-x-auto">
+                                            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                                <thead className="bg-gray-50 dark:bg-gray-700">
+                                                    <tr>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Name</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Matric</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Gender</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Race</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                                    {classStudents.map((student) => (
+                                                        <tr key={student.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{student.name}</td>
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{student.matric_number}</td>
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{student.gender}</td>
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{student.race}</td>
+                                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                                <span className={`px-2 py-1 text-xs font-medium rounded-full flex items-center gap-1 w-fit ${getStatusBadge(student.placement_status)}`}>
+                                                                    {getStatusIcon(student.placement_status)}
+                                                                    {student.placement_status.replace('_', ' ')}
+                                                                </span>
+                                                                {student.placement_notes && (
+                                                                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{student.placement_notes}</p>
+                                                                )}
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                                                <button
+                                                                    onClick={() => handleReassign(student.id, student.name, student.assigned_class?.id)}
+                                                                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                >
+                                                                    Reassign
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                                            No students assigned to this class yet.
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+
+                            {/* Unassigned Students */}
+                            {unassignedStudents.length > 0 && (
+                                <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+                                    {/* Header */}
+                                    <div className="bg-red-50 dark:bg-red-900/20 px-6 py-4 border-b border-red-200 dark:border-red-800">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <h3 className="text-lg font-semibold text-red-900 dark:text-red-200">Unassigned Students</h3>
+                                                <p className="text-sm text-red-700 dark:text-red-300">Students without a class assignment</p>
+                                            </div>
+                                            <div className="text-sm">
+                                                <span className="text-red-700 dark:text-red-300">Count: </span>
+                                                <span className="font-semibold text-red-900 dark:text-red-200">{unassignedStudents.length}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Unassigned Students Table */}
+                                    <div className="overflow-x-auto">
+                                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                            <thead className="bg-gray-50 dark:bg-gray-700">
+                                                <tr>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Name</th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Matric</th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Gender</th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Race</th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                                {unassignedStudents.map((student) => (
+                                                    <tr key={student.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{student.name}</td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{student.matric_number}</td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{student.gender}</td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{student.race}</td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <span className={`px-2 py-1 text-xs font-medium rounded-full flex items-center gap-1 w-fit ${getStatusBadge(student.placement_status)}`}>
+                                                                {getStatusIcon(student.placement_status)}
+                                                                {student.placement_status.replace('_', ' ')}
+                                                            </span>
+                                                            {student.placement_notes && (
+                                                                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{student.placement_notes}</p>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                                            <button
+                                                                onClick={() => handleReassign(student.id, student.name)}
+                                                                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                            >
+                                                                Assign
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
         </AppLayout>
