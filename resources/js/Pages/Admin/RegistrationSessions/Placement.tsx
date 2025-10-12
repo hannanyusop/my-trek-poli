@@ -1,0 +1,309 @@
+import { Head, Link, router } from '@inertiajs/react';
+import { useState } from 'react';
+import AppLayout from '@/Layouts/AppLayout';
+import { ArrowLeft, AlertCircle, CheckCircle, AlertTriangle, Users, BarChart3, Trash2 } from 'lucide-react';
+import Swal from 'sweetalert2';
+
+interface Class {
+    id: number;
+    name: string;
+    track: string;
+    quota: number;
+    assigned_count: number;
+    available_slots: number;
+    gender_distribution: Record<string, number>;
+    race_distribution: Record<string, number>;
+}
+
+interface Student {
+    id: number;
+    name: string;
+    matric_number: string;
+    gender: string;
+    race: string;
+    placement_status: string;
+    placement_notes?: string;
+    assigned_class?: {
+        id: number;
+        name: string;
+        registration_session_track: {
+            track: {
+                name: string;
+            };
+        };
+    };
+}
+
+interface Stats {
+    total_students: number;
+    placed: number;
+    manually_assigned: number;
+    flagged: number;
+    pending: number;
+}
+
+interface Props {
+    session: {
+        id: number;
+        name: string;
+        status: string;
+    };
+    students: Student[];
+    classes: Class[];
+    stats: Stats;
+}
+
+export default function Placement({ session, students, classes, stats }: Props) {
+    const [filter, setFilter] = useState<string>('all');
+
+    const filteredStudents = students.filter(student => {
+        if (filter === 'all') return true;
+        return student.placement_status === filter;
+    });
+
+    const handleReassign = (studentId: number, studentName: string, currentClassId?: number) => {
+        const classOptions = classes.map(c => `<option value="${c.id}" ${currentClassId === c.id ? 'selected' : ''}>${c.name} (${c.track}) - ${c.available_slots} slots left</option>`).join('');
+
+        Swal.fire({
+            title: `Reassign ${studentName}`,
+            html: `
+                <select id="class-select" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                    <option value="">Select a class...</option>
+                    ${classOptions}
+                </select>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Assign',
+            cancelButtonText: 'Cancel',
+            preConfirm: () => {
+                const classId = (document.getElementById('class-select') as HTMLSelectElement)?.value;
+                if (!classId) {
+                    Swal.showValidationMessage('Please select a class');
+                    return false;
+                }
+                return classId;
+            }
+        }).then((result) => {
+            if (result.isConfirmed && result.value) {
+                router.put(route('admin.registration-sessions.placement.update', {
+                    registration_session: session.id,
+                    student: studentId
+                }), {
+                    class_id: result.value
+                }, {
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        Swal.fire({
+                            title: 'Success!',
+                            text: 'Student has been reassigned.',
+                            icon: 'success',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                    }
+                });
+            }
+        });
+    };
+
+    const handleClearPlacements = () => {
+        Swal.fire({
+            title: 'Clear All Placements?',
+            text: 'This will remove all student assignments and reset the session to closed status. You can run placement again afterwards.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Yes, clear all',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                router.delete(route('admin.registration-sessions.placement.clear', session.id));
+            }
+        });
+    };
+
+    const getStatusBadge = (status: string) => {
+        const badges = {
+            placed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+            manually_assigned: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+            flagged: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+            pending: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+        };
+        return badges[status as keyof typeof badges] || badges.pending;
+    };
+
+    const getStatusIcon = (status: string) => {
+        const icons = {
+            placed: <CheckCircle className="h-4 w-4" />,
+            manually_assigned: <CheckCircle className="h-4 w-4" />,
+            flagged: <AlertCircle className="h-4 w-4" />,
+            pending: <AlertTriangle className="h-4 w-4" />
+        };
+        return icons[status as keyof typeof icons] || icons.pending;
+    };
+
+    return (
+        <AppLayout title="Manage Placements">
+            <Head title={`Placement Management - ${session.name}`} />
+
+            <div className="py-12">
+                <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
+                    {/* Header */}
+                    <div className="mb-6 flex items-center justify-between">
+                        <div className="flex items-center">
+                            <Link
+                                href={route('admin.registration-sessions.show', session.id)}
+                                className="mr-4 p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                            >
+                                <ArrowLeft className="h-6 w-6" />
+                            </Link>
+                            <div>
+                                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                                    Placement Management
+                                </h1>
+                                <p className="mt-1 text-gray-600 dark:text-gray-400">{session.name}</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={handleClearPlacements}
+                            className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                        >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Clear All Placements
+                        </button>
+                    </div>
+
+                    {/* Stats Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">Total</p>
+                                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total_students}</p>
+                                </div>
+                                <Users className="h-8 w-8 text-gray-400" />
+                            </div>
+                        </div>
+                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">Placed</p>
+                                    <p className="text-2xl font-bold text-green-600">{stats.placed}</p>
+                                </div>
+                                <CheckCircle className="h-8 w-8 text-green-400" />
+                            </div>
+                        </div>
+                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">Manual</p>
+                                    <p className="text-2xl font-bold text-blue-600">{stats.manually_assigned}</p>
+                                </div>
+                                <BarChart3 className="h-8 w-8 text-blue-400" />
+                            </div>
+                        </div>
+                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">Flagged</p>
+                                    <p className="text-2xl font-bold text-red-600">{stats.flagged}</p>
+                                </div>
+                                <AlertCircle className="h-8 w-8 text-red-400" />
+                            </div>
+                        </div>
+                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">Pending</p>
+                                    <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
+                                </div>
+                                <AlertTriangle className="h-8 w-8 text-yellow-400" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Filter Tabs */}
+                    <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow">
+                        <div className="flex border-b border-gray-200 dark:border-gray-700">
+                            {['all', 'placed', 'manually_assigned', 'flagged', 'pending'].map((status) => (
+                                <button
+                                    key={status}
+                                    onClick={() => setFilter(status)}
+                                    className={`px-6 py-3 text-sm font-medium transition-colors ${
+                                        filter === status
+                                            ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
+                                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                                    }`}
+                                >
+                                    {status.replace('_', ' ').charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Students Table */}
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <thead className="bg-gray-50 dark:bg-gray-700">
+                                    <tr>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Name</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Matric</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Gender</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Race</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Assigned Class</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                    {filteredStudents.map((student) => (
+                                        <tr key={student.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{student.name}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{student.matric_number}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{student.gender}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{student.race}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                                {student.assigned_class ? (
+                                                    <div>
+                                                        <div className="font-medium text-gray-900 dark:text-white">{student.assigned_class.name}</div>
+                                                        <div className="text-gray-500 dark:text-gray-400">{student.assigned_class.registration_session_track.track.name}</div>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-gray-400 dark:text-gray-500">Not assigned</span>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className={`px-2 py-1 text-xs font-medium rounded-full flex items-center gap-1 w-fit ${getStatusBadge(student.placement_status)}`}>
+                                                    {getStatusIcon(student.placement_status)}
+                                                    {student.placement_status.replace('_', ' ')}
+                                                </span>
+                                                {student.placement_notes && (
+                                                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{student.placement_notes}</p>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                                <button
+                                                    onClick={() => handleReassign(student.id, student.name, student.assigned_class?.id)}
+                                                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                >
+                                                    Reassign
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        {filteredStudents.length === 0 && (
+                            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                                No students found with this filter.
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </AppLayout>
+    );
+}

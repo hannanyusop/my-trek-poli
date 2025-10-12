@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Classes extends Model
 {
@@ -27,5 +28,15 @@ class Classes extends Model
     public function registrationSessionTrack(): BelongsTo
     {
         return $this->belongsTo(RegistrationSessionTrack::class);
+    }
+
+    public function students(): HasMany
+    {
+        return $this->hasMany(Student::class, 'assigned_class_id');
+    }
+
+    public function placementLogs(): HasMany
+    {
+        return $this->hasMany(PlacementLog::class, 'class_id');
     }
 }

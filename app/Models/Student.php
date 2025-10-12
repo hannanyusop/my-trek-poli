@@ -20,6 +20,9 @@ class Student extends Model
         'phone',
         'submitted_at',
         'is_submitted',
+        'assigned_class_id',
+        'placement_status',
+        'placement_notes',
     ];
 
     protected function casts(): array
@@ -38,5 +41,15 @@ class Student extends Model
     public function preferences(): HasMany
     {
         return $this->hasMany(StudentPreference::class);
+    }
+
+    public function assignedClass(): BelongsTo
+    {
+        return $this->belongsTo(Classes::class, 'assigned_class_id');
+    }
+
+    public function placementLogs(): HasMany
+    {
+        return $this->hasMany(PlacementLog::class);
     }
 }

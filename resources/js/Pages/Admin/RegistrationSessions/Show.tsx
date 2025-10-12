@@ -1,7 +1,7 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useState, useEffect, useRef } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
-import { Calendar, Users, BookOpen, Clock, ArrowLeft, QrCode, User, Target, Monitor, RotateCcw, FileSpreadsheet, FileText, Upload, UserPlus, Trash2, ChevronDown, MoreVertical, Copy, Check, Sparkles, XCircle } from 'lucide-react';
+import { Calendar, Users, BookOpen, Clock, ArrowLeft, QrCode, User, Target, Monitor, RotateCcw, FileSpreadsheet, FileText, Upload, UserPlus, Trash2, ChevronDown, MoreVertical, Copy, Check, Sparkles, XCircle, PlayCircle, Settings, Eye } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { RegistrationSession, Student, Class, PageProps } from '@/types';
 import { getStatusColor } from '@/lib/utils';
@@ -285,6 +285,102 @@ export default function Show({ session, classes, students, registrationLink }: P
         });
     };
 
+    const handleStartPlacement = () => {
+        Swal.fire({
+            title: 'Start Automatic Placement?',
+            html: `
+                <p class="text-sm text-gray-600 mb-2">This will automatically assign students to classes based on:</p>
+                <ul class="text-left text-sm text-gray-600 list-disc pl-6">
+                    <li>Student preferences (1st → 2nd → 3rd choice)</li>
+                    <li>First-come, first-served order</li>
+                    <li>Gender and race balance (proportional distribution)</li>
+                </ul>
+                <p class="text-sm text-gray-600 mt-4">The process may take several minutes for large groups.</p>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Start Placement',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'Processing...',
+                    text: 'Starting automatic placement. Please wait...',
+                    icon: 'info',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                router.post(route('admin.registration-sessions.start-placement', session.id), {}, {
+                    onSuccess: () => {
+                        Swal.fire({
+                            title: 'Started!',
+                            text: 'Placement processing has started. The page will refresh when complete.',
+                            icon: 'success',
+                            timer: 3000,
+                            showConfirmButton: false
+                        });
+
+                        // Poll for completion every 3 seconds
+                        const pollInterval = setInterval(() => {
+                            router.reload({ only: ['session'] });
+                        }, 3000);
+
+                        // Stop polling after 5 minutes
+                        setTimeout(() => clearInterval(pollInterval), 300000);
+                    },
+                    onError: () => {
+                        Swal.fire({
+                            title: 'Error!',
+                            text: 'Failed to start placement. Please try again.',
+                            icon: 'error'
+                        });
+                    }
+                });
+            }
+        });
+    };
+
+    const handlePublishResults = () => {
+        Swal.fire({
+            title: 'Publish Results?',
+            text: 'Once published, students will be able to view their assigned classes. Are you sure you want to proceed?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Yes, publish',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                router.post(route('admin.registration-sessions.publish', session.id), {}, {
+                    onSuccess: () => {
+                        Swal.fire({
+                            title: 'Published!',
+                            text: 'Results have been published. Students can now view their assigned classes.',
+                            icon: 'success',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                    },
+                    onError: () => {
+                        Swal.fire({
+                            title: 'Error!',
+                            text: 'Failed to publish results. Please try again.',
+                            icon: 'error'
+                        });
+                    }
+                });
+            }
+        });
+    };
+
     return (
         <AppLayout  title="Registration Session">
             <Head title={`Registration Session  - ${session.name}`} />
@@ -322,7 +418,44 @@ export default function Show({ session, classes, students, registrationLink }: P
                                         <Monitor className="mr-2 h-4 w-4" />
                                         Projector View
                                     </Link>
-                                    {session.status !== 'closed' && (
+
+                                    {session.status === 'closed' && (
+                                        <button
+                                            onClick={handleStartPlacement}
+                                            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                        >
+                                            <PlayCircle className="mr-2 h-4 w-4" />
+                                            Start Placement
+                                        </button>
+                                    )}
+
+                                    {session.status === 'processing' && (
+                                        <div className="flex items-center px-4 py-2 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-lg">
+                                            <div className="animate-spin mr-2 h-4 w-4 border-2 border-yellow-600 border-t-transparent rounded-full"></div>
+                                            Processing...
+                                        </div>
+                                    )}
+
+                                    {session.status === 'placement' && (
+                                        <>
+                                            <Link
+                                                href={route('admin.registration-sessions.placement.index', session.id)}
+                                                className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                                            >
+                                                <Settings className="mr-2 h-4 w-4" />
+                                                Manage Placements
+                                            </Link>
+                                            <button
+                                                onClick={handlePublishResults}
+                                                className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                            >
+                                                <Eye className="mr-2 h-4 w-4" />
+                                                Publish Results
+                                            </button>
+                                        </>
+                                    )}
+
+                                    {session.status !== 'closed' && session.status !== 'processing' && session.status !== 'placement' && session.status !== 'published' && (
                                         <button
                                             onClick={handleCloseSession}
                                             className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
@@ -331,6 +464,7 @@ export default function Show({ session, classes, students, registrationLink }: P
                                             Close Session
                                         </button>
                                     )}
+
                                     <span className={`px-3 py-1 text-sm font-medium rounded-full ${getStatusColor(session.status)}`}>
                                         {session.status}
                                     </span>

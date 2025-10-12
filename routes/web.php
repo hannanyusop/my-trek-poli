@@ -100,6 +100,16 @@ Route::middleware('auth')->group(function () {
         Route::post('registration-sessions/{registration_session}/generate-dummy', [RegistrationSessionController::class, 'generateDummyStudent'])->name('registration-sessions.generate-dummy');
         Route::post('registration-sessions/{registration_session}/generate-test-student', [RegistrationSessionController::class, 'generateTestStudent'])->name('registration-sessions.generate-test-student');
         Route::post('registration-sessions/{registration_session}/close', [RegistrationSessionController::class, 'closeSession'])->name('registration-sessions.close');
+
+        // Placement routes
+        Route::post('registration-sessions/{registration_session}/start-placement', [RegistrationSessionController::class, 'startPlacement'])->name('registration-sessions.start-placement');
+        Route::get('registration-sessions/{registration_session}/placement-progress', [RegistrationSessionController::class, 'placementProgress'])->name('registration-sessions.placement-progress');
+        Route::post('registration-sessions/{registration_session}/publish', [RegistrationSessionController::class, 'publishResults'])->name('registration-sessions.publish');
+        Route::get('registration-sessions/{registration_session}/placement', [\App\Http\Controllers\Admin\PlacementController::class, 'index'])->name('registration-sessions.placement.index');
+        Route::put('registration-sessions/{registration_session}/placement/students/{student}', [\App\Http\Controllers\Admin\PlacementController::class, 'update'])->name('registration-sessions.placement.update');
+        Route::post('registration-sessions/{registration_session}/placement/swap', [\App\Http\Controllers\Admin\PlacementController::class, 'swap'])->name('registration-sessions.placement.swap');
+        Route::delete('registration-sessions/{registration_session}/placement/clear', [\App\Http\Controllers\Admin\PlacementController::class, 'clear'])->name('registration-sessions.placement.clear');
+
         Route::resource('tracks', TrackController::class);
         Route::resource('races', RaceController::class);
         Route::resource('religions', ReligionController::class);

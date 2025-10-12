@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Exports\StudentsExport;
 use App\Http\Controllers\Controller;
+use App\Jobs\ProcessPlacementJob;
 use App\Models\Classes;
 use App\Models\RegistrationSession;
 use App\Models\Student;
 use App\Models\Track;
+use App\Services\PlacementService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Maatwebsite\Excel\Facades\Excel;
@@ -649,6 +651,57 @@ class RegistrationSessionController extends Controller
         $lastNames = ['Abdullah', 'Rahman', 'Ismail', 'Hassan', 'Ali', 'Mahmud', 'Yusof', 'Ibrahim', 'Ahmad', 'Omar'];
 
         return $firstNames[array_rand($firstNames)].' '.$lastNames[array_rand($lastNames)];
+    }
+
+    /**
+     * Start automatic placement processing.
+     */
+    public function startPlacement(string $id)
+    {
+        $session = RegistrationSession::findOrFail($id);
+
+        if ($session->status !== \App\Enums\RegistrationSessionStatus::Closed) {
+            return back()->withErrors(['status' => 'Session must be closed before starting placement.']);
+        }
+
+        // Update status to processing
+        $session->update(['status' => \App\Enums\RegistrationSessionStatus::Processing]);
+
+        // Dispatch job to process placements
+        ProcessPlacementJob::dispatch($session->id);
+
+        return back()->with('success', 'Placement processing has been started. This may take a few minutes.');
+    }
+
+    /**
+     * Get placement processing progress.
+     */
+    public function placementProgress(string $id)
+    {
+        $session = RegistrationSession::findOrFail($id);
+        $placementService = new PlacementService;
+        $progress = $placementService->getProgress($session->id);
+
+        return response()->json([
+            'status' => $session->status->value,
+            'progress' => $progress,
+        ]);
+    }
+
+    /**
+     * Publish placement results (make visible to students).
+     */
+    public function publishResults(string $id)
+    {
+        $session = RegistrationSession::findOrFail($id);
+
+        if ($session->status !== \App\Enums\RegistrationSessionStatus::Placement) {
+            return back()->withErrors(['status' => 'Placements must be completed before publishing.']);
+        }
+
+        $session->update(['status' => \App\Enums\RegistrationSessionStatus::Published]);
+
+        return back()->with('success', 'Results have been published. Students can now view their assigned classes.');
     }
 
     /**
