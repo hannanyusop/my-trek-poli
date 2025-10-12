@@ -96,3 +96,13 @@ export interface StudentWithRelations extends Student {
 export interface RegistrationSessionWithTracks extends RegistrationSession {
     tracks: RegistrationSessionTrack[];
 }
+
+export interface FlashMessages {
+    success?: string;
+    error?: string;
+}
+
+export interface PageProps {
+    flash?: FlashMessages;
+    [key: string]: any;
+}

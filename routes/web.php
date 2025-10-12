@@ -97,6 +97,8 @@ Route::middleware('auth')->group(function () {
         Route::get('registration-sessions/{registration_session}/download-template', [RegistrationSessionController::class, 'downloadTemplate'])->name('registration-sessions.download-template');
         Route::post('registration-sessions/{registration_session}/process-upload', [RegistrationSessionController::class, 'processUpload'])->name('registration-sessions.process-upload');
         Route::post('registration-sessions/{registration_session}/confirm-upload', [RegistrationSessionController::class, 'confirmUpload'])->name('registration-sessions.confirm-upload');
+        Route::post('registration-sessions/{registration_session}/generate-dummy', [RegistrationSessionController::class, 'generateDummyStudent'])->name('registration-sessions.generate-dummy');
+        Route::post('registration-sessions/{registration_session}/generate-test-student', [RegistrationSessionController::class, 'generateTestStudent'])->name('registration-sessions.generate-test-student');
         Route::resource('tracks', TrackController::class);
         Route::resource('races', RaceController::class);
         Route::resource('religions', ReligionController::class);

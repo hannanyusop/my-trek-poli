@@ -1,9 +1,9 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useState, useEffect, useRef } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
-import { Calendar, Users, BookOpen, Clock, ArrowLeft, QrCode, User, Target, Monitor, RotateCcw, FileSpreadsheet, FileText, Upload, UserPlus, Trash2, ChevronDown, MoreVertical, Copy, Check } from 'lucide-react';
+import { Calendar, Users, BookOpen, Clock, ArrowLeft, QrCode, User, Target, Monitor, RotateCcw, FileSpreadsheet, FileText, Upload, UserPlus, Trash2, ChevronDown, MoreVertical, Copy, Check, Sparkles } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { RegistrationSession, Student, Class } from '@/types';
+import { RegistrationSession, Student, Class, PageProps } from '@/types';
 import { getStatusColor } from '@/lib/utils';
 import AddSingleStudentModal from '@/Components/AddSingleStudentModal';
 import Swal from 'sweetalert2';
@@ -34,7 +34,7 @@ export default function Show({ session, classes, students, registrationLink }: P
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, []);
-    
+
     const copyToClipboard = async (text: string) => {
         try {
             await navigator.clipboard.writeText(text);
@@ -115,6 +115,134 @@ export default function Show({ session, classes, students, registrationLink }: P
                         Swal.fire({
                             title: 'Error!',
                             text: 'Failed to delete student. Please try again.',
+                            icon: 'error'
+                        });
+                    }
+                });
+            }
+        });
+    };
+
+    const handleGenerateDummyStudent = () => {
+        Swal.fire({
+            title: 'Generate Dummy Students',
+            html: `
+                <div class="text-left">
+                    <p class="text-sm text-gray-600 mb-4">This will create dummy students with randomized data and automatically submit their registration forms.</p>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">How many students do you want to create?</label>
+                    <input
+                        type="number"
+                        id="student-count"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        value="1"
+                        min="1"
+                        max="100"
+                    />
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#8b5cf6',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Generate',
+            cancelButtonText: 'Cancel',
+            preConfirm: () => {
+                const count = (document.getElementById('student-count') as HTMLInputElement)?.value;
+                const numCount = parseInt(count || '1', 10);
+
+                if (isNaN(numCount) || numCount < 1) {
+                    Swal.showValidationMessage('Please enter a valid number (minimum 1)');
+                    return false;
+                }
+
+                if (numCount > 100) {
+                    Swal.showValidationMessage('Maximum 100 students at a time');
+                    return false;
+                }
+
+                return numCount;
+            }
+        }).then((result) => {
+            if (result.isConfirmed && result.value) {
+                const count = result.value;
+
+                // Show loading
+                Swal.fire({
+                    title: 'Generating...',
+                    text: `Creating ${count} dummy student${count > 1 ? 's' : ''}...`,
+                    icon: 'info',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                router.post(route('admin.registration-sessions.generate-dummy', session.id), {
+                    count: count
+                }, {
+                    onSuccess: () => {
+                        Swal.fire({
+                            title: 'Success!',
+                            text: `${count} dummy student${count > 1 ? 's' : ''} generated and registered successfully!`,
+                            icon: 'success',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                    },
+                    onError: (errors) => {
+                        const errorMessage = Object.values(errors).flat().join(' ');
+                        Swal.fire({
+                            title: 'Error!',
+                            text: errorMessage || 'Failed to generate dummy students. Please try again.',
+                            icon: 'error'
+                        });
+                    }
+                });
+            }
+        });
+    };
+
+    const handleGenerateTestStudent = () => {
+        Swal.fire({
+            title: 'Generate Test Student?',
+            text: 'This will create a test student with dummy data that you can use to fill up the registration form. The student will NOT be auto-submitted.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Generate Test Student',
+            cancelButtonText: 'Cancel',
+            html: '<p class="text-sm text-gray-600 mt-2">After generation, you will receive a link to test the registration flow.</p>'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                router.post(route('admin.registration-sessions.generate-test-student', session.id), {}, {
+                    onSuccess: (page) => {
+                        // Extract the registration link from the success message
+                        const successMessage = page.props.flash?.success || '';
+                        const linkMatch = successMessage.match(/(http[s]?:\/\/[^\s]+)/);
+                        const registrationLink = linkMatch ? linkMatch[1] : '';
+
+                        Swal.fire({
+                            title: 'Test Student Created!',
+                            html: successMessage.replace(registrationLink, `<br><br><a href="${registrationLink}" target="_blank" class="text-blue-600 underline hover:text-blue-800">Click here to test registration</a>`),
+                            icon: 'success',
+                            confirmButtonText: 'OK',
+                            showCancelButton: true,
+                            cancelButtonText: 'Open Link',
+                            cancelButtonColor: '#3b82f6'
+                        }).then((result) => {
+                            if (!result.isConfirmed && registrationLink) {
+                                window.open(registrationLink, '_blank');
+                            }
+                        });
+                    },
+                    onError: (errors) => {
+                        const errorMessage = Object.values(errors).flat().join(' ');
+                        Swal.fire({
+                            title: 'Error!',
+                            text: errorMessage || 'Failed to generate test student. Please try again.',
                             icon: 'error'
                         });
                     }
@@ -347,7 +475,7 @@ export default function Show({ session, classes, students, registrationLink }: P
                                                     <UserPlus className="mr-2 h-4 w-4" />
                                                     Add Student
                                                 </button>
-                                                
+
                                                 <div className="relative" ref={dropdownRef}>
                                                     <button
                                                         onClick={() => setIsActionsDropdownOpen(!isActionsDropdownOpen)}
@@ -359,7 +487,7 @@ export default function Show({ session, classes, students, registrationLink }: P
                                                     </button>
 
                                                     {isActionsDropdownOpen && (
-                                                        <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-10">
+                                                        <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-10">
                                                             <div className="py-1">
                                                                 <Link
                                                                     href={route('admin.registration-sessions.bulk-upload', session.id)}
@@ -369,7 +497,7 @@ export default function Show({ session, classes, students, registrationLink }: P
                                                                     <Upload className="mr-3 h-4 w-4 text-blue-500" />
                                                                     Bulk Upload
                                                                 </Link>
-                                                                
+
                                                                 {students.length > 0 && (
                                                                     <>
                                                                         <Link
@@ -390,6 +518,30 @@ export default function Show({ session, classes, students, registrationLink }: P
                                                                         </Link>
                                                                     </>
                                                                 )}
+
+                                                                <div className="border-t border-gray-200 dark:border-gray-600 my-1"></div>
+
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setIsActionsDropdownOpen(false);
+                                                                        handleGenerateTestStudent();
+                                                                    }}
+                                                                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left"
+                                                                >
+                                                                    <User className="mr-3 h-4 w-4 text-green-500" />
+                                                                    Generate Test Student
+                                                                </button>
+
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setIsActionsDropdownOpen(false);
+                                                                        handleGenerateDummyStudent();
+                                                                    }}
+                                                                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left"
+                                                                >
+                                                                    <Sparkles className="mr-3 h-4 w-4 text-purple-500" />
+                                                                    Generate Dummy Student
+                                                                </button>
                                                             </div>
                                                         </div>
                                                     )}

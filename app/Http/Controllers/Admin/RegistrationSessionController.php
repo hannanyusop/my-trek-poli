@@ -485,6 +485,173 @@ class RegistrationSessionController extends Controller
     }
 
     /**
+     * Generate and submit dummy students with fake data.
+     */
+    public function generateDummyStudent(Request $request, string $id)
+    {
+        $request->validate([
+            'count' => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $count = $request->input('count', 1);
+
+        $session = RegistrationSession::findOrFail($id);
+
+        // Get available tracks for this session
+        $availableTracks = \App\Models\RegistrationSessionTrack::where('registration_session_id', $session->id)
+            ->pluck('id')
+            ->toArray();
+
+        if (empty($availableTracks)) {
+            return back()->withErrors(['tracks' => 'No tracks available for this session. Please add tracks first.']);
+        }
+
+        // Get active races and religions
+        $races = \App\Models\Race::where('is_active', true)->pluck('name')->toArray();
+        $religions = \App\Models\Religion::where('is_active', true)->pluck('name')->toArray();
+
+        if (empty($races)) {
+            return back()->withErrors(['race' => 'No races available. Please add races first.']);
+        }
+
+        if (empty($religions)) {
+            return back()->withErrors(['religion' => 'No religions available. Please add religions first.']);
+        }
+
+        $createdStudents = [];
+
+        // Create multiple students
+        for ($i = 0; $i < $count; $i++) {
+            // Generate unique matric number with timestamp to avoid duplicates
+            $matricNumber = 'S'.rand(100000, 999999).strtoupper(substr(md5(microtime().$i), 0, 2));
+
+            // Generate unique identification number
+            $identificationNumber = rand(100000000000, 999999999999);
+
+            // Ensure uniqueness
+            while (Student::where('matric_number', $matricNumber)->exists()) {
+                $matricNumber = 'S'.rand(100000, 999999).strtoupper(substr(md5(microtime().$i), 0, 2));
+            }
+
+            while (Student::where('identification_number', $identificationNumber)
+                ->where('registration_session_id', $session->id)
+                ->exists()) {
+                $identificationNumber = rand(100000000000, 999999999999);
+            }
+
+            $name = $this->generateRandomName();
+
+            // Generate dummy student data
+            $studentData = [
+                'registration_session_id' => $session->id,
+                'matric_number' => $matricNumber,
+                'identification_number' => $identificationNumber,
+                'name' => $name,
+                'gender' => ['male', 'female'][rand(0, 1)],
+                'race' => $races[array_rand($races)],
+                'religion' => $religions[array_rand($religions)],
+                'email' => strtolower(str_replace(' ', '.', $name)).'@student.edu.my',
+                'phone' => '01'.rand(1, 9).rand(10000000, 99999999),
+                'is_submitted' => true,
+                'submitted_at' => now(),
+            ];
+
+            // Create the student
+            $student = Student::create($studentData);
+            $createdStudents[] = $student->name;
+
+            // Generate random track preferences (3 preferences)
+            $trackCount = min(3, count($availableTracks));
+
+            // Randomly select tracks
+            $shuffledTracks = $availableTracks;
+            shuffle($shuffledTracks);
+            $selectedTracks = array_slice($shuffledTracks, 0, $trackCount);
+
+            // Create preferences
+            foreach ($selectedTracks as $index => $trackId) {
+                \App\Models\StudentPreference::create([
+                    'student_id' => $student->id,
+                    'registration_session_track_id' => $trackId,
+                    'priority' => $index + 1,
+                ]);
+            }
+
+            // Small delay to avoid duplicate timestamps
+            usleep(10000); // 0.01 seconds
+        }
+
+        $message = $count === 1
+            ? "Dummy student '{$createdStudents[0]}' added and submitted successfully!"
+            : "{$count} dummy students added and submitted successfully!";
+
+        return back()->with('success', $message);
+    }
+
+    /**
+     * Generate a test dummy student (unsubmitted) for testing the registration form.
+     */
+    public function generateTestStudent(Request $request, string $id): \Illuminate\Http\RedirectResponse
+    {
+        $session = RegistrationSession::findOrFail($id);
+
+        // Get active races and religions
+        $races = \App\Models\Race::where('is_active', true)->pluck('name')->toArray();
+        $religions = \App\Models\Religion::where('is_active', true)->pluck('name')->toArray();
+
+        if (empty($races)) {
+            return back()->withErrors(['race' => 'No races available. Please add races first.']);
+        }
+
+        if (empty($religions)) {
+            return back()->withErrors(['religion' => 'No religions available. Please add religions first.']);
+        }
+
+        // Generate unique matric number
+        $matricNumber = 'S'.rand(100000, 999999).strtoupper(substr(md5(time()), 0, 2));
+
+        // Generate unique identification number
+        $identificationNumber = rand(100000000000, 999999999999);
+
+        $name = $this->generateRandomName();
+
+        // Generate dummy student data (but NOT submitted)
+        $studentData = [
+            'registration_session_id' => $session->id,
+            'matric_number' => $matricNumber,
+            'identification_number' => $identificationNumber,
+            'name' => $name,
+            'gender' => ['male', 'female'][rand(0, 1)],
+            'race' => $races[array_rand($races)],
+            'religion' => $religions[array_rand($religions)],
+            'email' => strtolower(str_replace(' ', '.', $name)).'@student.edu.my',
+            'phone' => '01'.rand(1, 9).rand(10000000, 99999999),
+            'is_submitted' => false, // NOT submitted - ready for form testing
+            'submitted_at' => null,
+        ];
+
+        // Create the student
+        $student = Student::create($studentData);
+
+        // Generate registration link with matric number
+        $registrationLink = url("/register/{$session->link_token}?matric_number={$student->matric_number}");
+
+        // Return success with link to test
+        return back()->with('success', "Test student '{$student->name}' ({$student->matric_number}) created! Use this link to test: {$registrationLink}");
+    }
+
+    /**
+     * Generate a random name for dummy students.
+     */
+    private function generateRandomName(): string
+    {
+        $firstNames = ['Ahmad', 'Nurul', 'Muhammad', 'Siti', 'Amir', 'Ain', 'Hakim', 'Fatimah', 'Zaki', 'Aisyah', 'Danial', 'Sarah', 'Haris', 'Amira', 'Irfan'];
+        $lastNames = ['Abdullah', 'Rahman', 'Ismail', 'Hassan', 'Ali', 'Mahmud', 'Yusof', 'Ibrahim', 'Ahmad', 'Omar'];
+
+        return $firstNames[array_rand($firstNames)].' '.$lastNames[array_rand($lastNames)];
+    }
+
+    /**
      * Remove the specified resource from storage.
      */
     public function destroy(string $id)
