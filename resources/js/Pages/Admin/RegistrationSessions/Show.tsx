@@ -1,7 +1,7 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useState, useEffect, useRef } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
-import { Calendar, Users, BookOpen, Clock, ArrowLeft, QrCode, User, Target, Monitor, RotateCcw, FileSpreadsheet, FileText, Upload, UserPlus, Trash2, ChevronDown, MoreVertical, Copy, Check, Sparkles } from 'lucide-react';
+import { Calendar, Users, BookOpen, Clock, ArrowLeft, QrCode, User, Target, Monitor, RotateCcw, FileSpreadsheet, FileText, Upload, UserPlus, Trash2, ChevronDown, MoreVertical, Copy, Check, Sparkles, XCircle } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { RegistrationSession, Student, Class, PageProps } from '@/types';
 import { getStatusColor } from '@/lib/utils';
@@ -218,7 +218,7 @@ export default function Show({ session, classes, students, registrationLink }: P
         }).then((result) => {
             if (result.isConfirmed) {
                 router.post(route('admin.registration-sessions.generate-test-student', session.id), {}, {
-                    onSuccess: (page) => {
+                    onSuccess: (page: { props: PageProps }) => {
                         // Extract the registration link from the success message
                         const successMessage = page.props.flash?.success || '';
                         const linkMatch = successMessage.match(/(http[s]?:\/\/[^\s]+)/);
@@ -243,6 +243,40 @@ export default function Show({ session, classes, students, registrationLink }: P
                         Swal.fire({
                             title: 'Error!',
                             text: errorMessage || 'Failed to generate test student. Please try again.',
+                            icon: 'error'
+                        });
+                    }
+                });
+            }
+        });
+    };
+
+    const handleCloseSession = () => {
+        Swal.fire({
+            title: 'Close Registration Session?',
+            text: 'Are you sure you want to close this registration session? Students will no longer be able to register.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Yes, close session',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                router.post(route('admin.registration-sessions.close', session.id), {}, {
+                    onSuccess: () => {
+                        Swal.fire({
+                            title: 'Closed!',
+                            text: 'Registration session has been closed successfully.',
+                            icon: 'success',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                    },
+                    onError: () => {
+                        Swal.fire({
+                            title: 'Error!',
+                            text: 'Failed to close session. Please try again.',
                             icon: 'error'
                         });
                     }
@@ -288,6 +322,15 @@ export default function Show({ session, classes, students, registrationLink }: P
                                         <Monitor className="mr-2 h-4 w-4" />
                                         Projector View
                                     </Link>
+                                    {session.status !== 'closed' && (
+                                        <button
+                                            onClick={handleCloseSession}
+                                            className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                                        >
+                                            <XCircle className="mr-2 h-4 w-4" />
+                                            Close Session
+                                        </button>
+                                    )}
                                     <span className={`px-3 py-1 text-sm font-medium rounded-full ${getStatusColor(session.status)}`}>
                                         {session.status}
                                     </span>

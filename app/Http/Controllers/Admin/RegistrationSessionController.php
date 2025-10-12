@@ -652,6 +652,20 @@ class RegistrationSessionController extends Controller
     }
 
     /**
+     * Close a registration session.
+     */
+    public function closeSession(string $id)
+    {
+        $session = RegistrationSession::findOrFail($id);
+
+        $session->update([
+            'status' => \App\Enums\RegistrationSessionStatus::Closed,
+        ]);
+
+        return back()->with('success', 'Registration session has been closed successfully.');
+    }
+
+    /**
      * Remove the specified resource from storage.
      */
     public function destroy(string $id)
