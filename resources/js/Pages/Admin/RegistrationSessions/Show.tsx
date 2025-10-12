@@ -1,7 +1,7 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useState, useEffect, useRef } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
-import { Calendar, Users, BookOpen, Clock, ArrowLeft, QrCode, ExternalLink, User, Target, Monitor, RotateCcw, FileSpreadsheet, FileText, Upload, UserPlus, Trash2, ChevronDown, MoreVertical } from 'lucide-react';
+import { Calendar, Users, BookOpen, Clock, ArrowLeft, QrCode, User, Target, Monitor, RotateCcw, FileSpreadsheet, FileText, Upload, UserPlus, Trash2, ChevronDown, MoreVertical, Copy, Check } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { RegistrationSession, Student, Class } from '@/types';
 import { getStatusColor } from '@/lib/utils';
@@ -18,6 +18,7 @@ interface Props {
 export default function Show({ session, classes, students, registrationLink }: Props) {
     const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
     const [isActionsDropdownOpen, setIsActionsDropdownOpen] = useState(false);
+    const [isCopied, setIsCopied] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Close dropdown when clicking outside
@@ -34,8 +35,21 @@ export default function Show({ session, classes, students, registrationLink }: P
         };
     }, []);
     
-    const copyToClipboard = (text: string) => {
-        navigator.clipboard.writeText(text);
+    const copyToClipboard = async (text: string) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            setIsCopied(true);
+            setTimeout(() => setIsCopied(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy to clipboard:', err);
+            Swal.fire({
+                title: 'Error!',
+                text: 'Failed to copy to clipboard. Please try again.',
+                icon: 'error',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        }
     };
 
     const handleUndoSubmission = (studentId: number, studentName: string) => {
@@ -209,10 +223,18 @@ export default function Show({ session, classes, students, registrationLink }: P
                                                     </code>
                                                     <button
                                                         onClick={() => copyToClipboard(registrationLink)}
-                                                        className="ml-2 p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
-                                                        title="Copy to clipboard"
+                                                        className={`ml-2 p-2 transition-colors ${
+                                                            isCopied
+                                                                ? 'text-green-600 dark:text-green-400'
+                                                                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                                                        }`}
+                                                        title={isCopied ? 'Copied!' : 'Copy to clipboard'}
                                                     >
-                                                        <ExternalLink className="h-4 w-4" />
+                                                        {isCopied ? (
+                                                            <Check className="h-4 w-4" />
+                                                        ) : (
+                                                            <Copy className="h-4 w-4" />
+                                                        )}
                                                     </button>
                                                 </div>
                                             </div>

@@ -253,10 +253,14 @@ class RegistrationSessionController extends Controller
             $previewData = [];
             $errors = [];
             $seenMatricNumbers = []; // Track matric numbers in current file
+            $seenIdentificationNumbers = []; // Track identification numbers in current file
 
-            // Get existing matric numbers from database for this session
+            // Get existing matric numbers and identification numbers from database for this session
             $existingMatricNumbers = Student::where('registration_session_id', $id)
                 ->pluck('matric_number')
+                ->toArray();
+            $existingIdentificationNumbers = Student::where('registration_session_id', $id)
+                ->pluck('identification_number')
                 ->toArray();
 
             $handle = fopen($file->path(), 'r');
@@ -300,6 +304,18 @@ class RegistrationSessionController extends Controller
 
                 if (empty($studentData['identification_number'])) {
                     $rowErrors[] = 'Identification number is required';
+                } else {
+                    // Check for duplicate identification number in database
+                    if (in_array($studentData['identification_number'], $existingIdentificationNumbers)) {
+                        $rowErrors[] = 'Identification number already exists in database for this session';
+                    }
+
+                    // Check for duplicate identification number in current file
+                    if (in_array($studentData['identification_number'], $seenIdentificationNumbers)) {
+                        $rowErrors[] = 'Duplicate identification number in file';
+                    } else {
+                        $seenIdentificationNumbers[] = $studentData['identification_number'];
+                    }
                 }
                 if (empty($studentData['name'])) {
                     $rowErrors[] = 'Name is required';
@@ -424,11 +440,11 @@ class RegistrationSessionController extends Controller
         Student::create([
             'registration_session_id' => $session->id,
             'matric_number' => $request->matric_number,
-            'name' => '', // Will be filled during registration
-            'identification_number' => '',
-            'gender' => 'Male', // Default value since it's enum
-            'race' => '',
-            'religion' => '',
+            'name' => 'TBD', // Will be filled during registration
+            'identification_number' => $tempIdNumber,
+            'gender' => 'male', // Default value since it's enum
+            'race' => 'TBD',
+            'religion' => 'TBD',
             'email' => '',
             'phone' => '',
             'is_submitted' => false,

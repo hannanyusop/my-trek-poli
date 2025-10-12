@@ -27,6 +27,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->unique(['registration_session_id', 'matric_number'], 'students_session_matric_unique');
+            $table->unique(['registration_session_id', 'identification_number'], 'students_session_ic_unique');
         });
     }
 
