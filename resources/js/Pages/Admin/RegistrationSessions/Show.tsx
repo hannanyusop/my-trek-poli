@@ -455,6 +455,16 @@ export default function Show({ session, classes, students, registrationLink }: P
                                         </>
                                     )}
 
+                                    {session.status === 'published' && (
+                                        <Link
+                                            href={route('admin.registration-sessions.placement.index', session.id)}
+                                            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                        >
+                                            <Eye className="mr-2 h-4 w-4" />
+                                            View Placements
+                                        </Link>
+                                    )}
+
                                     {session.status !== 'closed' && session.status !== 'processing' && session.status !== 'placement' && session.status !== 'published' && (
                                         <button
                                             onClick={handleCloseSession}

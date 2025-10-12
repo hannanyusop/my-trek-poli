@@ -62,6 +62,9 @@ export default function Placement({ session, students, classes, stats }: Props) 
     const [searchGender, setSearchGender] = useState<string>('');
     const [searchRace, setSearchRace] = useState<string>('');
 
+    // Check if editing is allowed (not published)
+    const isReadOnly = session.status === 'published';
+
     const filteredStudents = students.filter(student => {
         if (filter === 'all') return true;
         return student.placement_status === filter;
@@ -205,19 +208,38 @@ export default function Placement({ session, students, classes, stats }: Props) 
                             </Link>
                             <div>
                                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                                    Placement Management
+                                    {isReadOnly ? 'View Placements' : 'Placement Management'}
                                 </h1>
                                 <p className="mt-1 text-gray-600 dark:text-gray-400">{session.name}</p>
                             </div>
                         </div>
-                        <button
-                            onClick={handleClearPlacements}
-                            className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                        >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Clear All Placements
-                        </button>
+                        {!isReadOnly && (
+                            <button
+                                onClick={handleClearPlacements}
+                                className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                            >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Clear All Placements
+                            </button>
+                        )}
                     </div>
+
+                    {/* Read-Only Notice */}
+                    {isReadOnly && (
+                        <div className="mb-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                            <div className="flex items-center">
+                                <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-3" />
+                                <div>
+                                    <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-200">
+                                        Read-Only Mode
+                                    </h3>
+                                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                                        Results have been published. Editing is disabled to maintain placement integrity.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Stats Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
@@ -365,12 +387,16 @@ export default function Placement({ session, students, classes, stats }: Props) 
                                                     )}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                                    <button
-                                                        onClick={() => handleReassign(student.id, student.name, student.assigned_class?.id)}
-                                                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                                    >
-                                                        Reassign
-                                                    </button>
+                                                    {!isReadOnly ? (
+                                                        <button
+                                                            onClick={() => handleReassign(student.id, student.name, student.assigned_class?.id)}
+                                                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                        >
+                                                            Reassign
+                                                        </button>
+                                                    ) : (
+                                                        <span className="text-gray-400 dark:text-gray-500">-</span>
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))}
@@ -542,12 +568,16 @@ export default function Placement({ session, students, classes, stats }: Props) 
                                                                 )}
                                                             </td>
                                                             <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                                                <button
-                                                                    onClick={() => handleReassign(student.id, student.name, student.assigned_class?.id)}
-                                                                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                                                >
-                                                                    Reassign
-                                                                </button>
+                                                                {!isReadOnly ? (
+                                                                    <button
+                                                                        onClick={() => handleReassign(student.id, student.name, student.assigned_class?.id)}
+                                                                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                    >
+                                                                        Reassign
+                                                                    </button>
+                                                                ) : (
+                                                                    <span className="text-gray-400 dark:text-gray-500">-</span>
+                                                                )}
                                                             </td>
                                                         </tr>
                                                     ))}
@@ -609,12 +639,16 @@ export default function Placement({ session, students, classes, stats }: Props) 
                                                             )}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                                            <button
-                                                                onClick={() => handleReassign(student.id, student.name)}
-                                                                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                                            >
-                                                                Assign
-                                                            </button>
+                                                            {!isReadOnly ? (
+                                                                <button
+                                                                    onClick={() => handleReassign(student.id, student.name)}
+                                                                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                >
+                                                                    Assign
+                                                                </button>
+                                                            ) : (
+                                                                <span className="text-gray-400 dark:text-gray-500">-</span>
+                                                            )}
                                                         </td>
                                                     </tr>
                                                 ))}

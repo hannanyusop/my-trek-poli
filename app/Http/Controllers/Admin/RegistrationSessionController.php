@@ -49,12 +49,64 @@ class RegistrationSessionController extends Controller
             'end_date' => 'required|date|after:start_date',
             'tracks' => 'required|array|min:1',
             'tracks.*' => 'exists:tracks,id',
-            'classes' => 'nullable|array', // Make classes nullable for now
+            'classes' => 'nullable|array',
+            'classes.*.*.name' => 'required|string|max:255',
+            'classes.*.*.quota' => 'required|integer|min:1',
         ]);
 
-        // For now, just redirect back with success message
-        // You can implement the actual storage logic here
-        return redirect()->route('semester-registration')->with('success', 'Registration session created successfully!');
+        try {
+            \DB::beginTransaction();
+
+            // Create the registration session
+            $session = RegistrationSession::create([
+                'name' => $request->name,
+                'description' => $request->description,
+                'start_date' => $request->start_date,
+                'end_date' => $request->end_date,
+                'status' => \App\Enums\RegistrationSessionStatus::Draft,
+                'link_token' => \Str::random(32),
+            ]);
+
+            // Create registration session tracks and their classes
+            foreach ($request->tracks as $trackId) {
+                $track = Track::findOrFail($trackId);
+
+                // Create the registration session track
+                $sessionTrack = $session->tracks()->create([
+                    'track_id' => $track->id,
+                    'name' => $track->name,
+                    'description' => $track->description,
+                ]);
+
+                // Create classes for this track if provided
+                if (isset($request->classes[$trackId])) {
+                    foreach ($request->classes[$trackId] as $classData) {
+                        $sessionTrack->classes()->create([
+                            'name' => $classData['name'],
+                            'quota' => $classData['quota'],
+                            'current_count' => 0,
+                            'is_active' => true,
+                        ]);
+                    }
+                }
+            }
+
+            \DB::commit();
+
+            return redirect()->route('admin.registration-sessions.show', $session->id)
+                ->with('success', 'Registration session created successfully!');
+
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            \Log::error('Failed to create registration session: '.$e->getMessage(), [
+                'exception' => $e,
+                'request_data' => $request->all(),
+            ]);
+
+            return back()->withInput()->withErrors([
+                'error' => 'Failed to create registration session. Please try again.',
+            ]);
+        }
     }
 
     /**

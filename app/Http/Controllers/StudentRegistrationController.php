@@ -114,7 +114,7 @@ class StudentRegistrationController extends Controller
             ->where('registration_session_id', $registrationSession->id)
             ->first();
 
-        if (!$existingStudent) {
+        if (! $existingStudent) {
             return redirect()->route('student.registration.show', $token)
                 ->withErrors(['matric_number' => 'Student not found. Please ask assistance from admin.']);
         }
@@ -239,7 +239,7 @@ class StudentRegistrationController extends Controller
         if ($registrationSession->status === 'published') {
             $placement = \App\Models\Placement::where('student_id', $student->id)
                 ->where('is_active', true)
-                ->with(['class.registrationSessionTrack.track'])
+                ->with(['assignedClass.registrationSessionTrack.track'])
                 ->first();
         }
 
@@ -271,7 +271,7 @@ class StudentRegistrationController extends Controller
         if ($registrationSession->status === 'published') {
             $placement = \App\Models\Placement::where('student_id', $student->id)
                 ->where('is_active', true)
-                ->with(['class.registrationSessionTrack.track'])
+                ->with(['assignedClass.registrationSessionTrack.track'])
                 ->first();
         }
 

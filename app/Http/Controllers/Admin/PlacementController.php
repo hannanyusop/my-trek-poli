@@ -107,6 +107,11 @@ class PlacementController extends Controller
         ]);
 
         $session = RegistrationSession::findOrFail($sessionId);
+
+        // Prevent editing if results are published
+        if ($session->status === RegistrationSessionStatus::Published) {
+            return back()->withErrors(['error' => 'Cannot edit placements after results have been published.']);
+        }
         $student = Student::where('id', $studentId)
             ->where('registration_session_id', $sessionId)
             ->with(['preferences.registrationSessionTrack', 'activePlacement'])
@@ -174,6 +179,13 @@ class PlacementController extends Controller
             'student2_id' => 'required|exists:students,id|different:student1_id',
         ]);
 
+        $session = RegistrationSession::findOrFail($sessionId);
+
+        // Prevent editing if results are published
+        if ($session->status === RegistrationSessionStatus::Published) {
+            return back()->withErrors(['error' => 'Cannot edit placements after results have been published.']);
+        }
+
         $student1 = Student::where('id', $request->student1_id)
             ->where('registration_session_id', $sessionId)
             ->with('activePlacement')
@@ -238,6 +250,11 @@ class PlacementController extends Controller
     public function clear(string $sessionId)
     {
         $session = RegistrationSession::findOrFail($sessionId);
+
+        // Prevent clearing if results are published
+        if ($session->status === RegistrationSessionStatus::Published) {
+            return back()->withErrors(['error' => 'Cannot clear placements after results have been published.']);
+        }
 
         // Deactivate all active placements for this session
         Placement::whereHas('student', function ($query) use ($sessionId) {

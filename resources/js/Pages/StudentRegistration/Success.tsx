@@ -34,7 +34,7 @@ interface TrackPreference {
 
 interface Placement {
     id: number;
-    class: {
+    assigned_class: {
         id: number;
         name: string;
         registration_session_track: {
@@ -182,10 +182,10 @@ export default function Success({ registrationSession, student, preferences, pla
                                                 <div className="flex justify-between items-start mb-2">
                                                     <div>
                                                         <h4 className="font-medium text-green-900 dark:text-green-100">
-                                                            {placement.class.registration_session_track.track.name}
+                                                            {placement.assigned_class.registration_session_track.track.name}
                                                         </h4>
                                                         <p className="text-sm text-green-700 dark:text-green-300">
-                                                            Class: {placement.class.name}
+                                                            Class: {placement.assigned_class.name}
                                                         </p>
                                                     </div>
                                                     <span className="px-3 py-1 text-xs font-medium text-green-800 bg-green-200 dark:bg-green-800 dark:text-green-200 rounded-full">
