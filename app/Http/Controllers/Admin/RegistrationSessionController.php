@@ -64,7 +64,7 @@ class RegistrationSessionController extends Controller
                 'start_date' => $request->start_date,
                 'end_date' => $request->end_date,
                 'status' => \App\Enums\RegistrationSessionStatus::Draft,
-                'link_token' => \Str::random(32),
+                'link_token' => $this->generateUniqueSlug(),
             ]);
 
             // Create registration session tracks and their classes
@@ -703,6 +703,34 @@ class RegistrationSessionController extends Controller
         $lastNames = ['Abdullah', 'Rahman', 'Ismail', 'Hassan', 'Ali', 'Mahmud', 'Yusof', 'Ibrahim', 'Ahmad', 'Omar'];
 
         return $firstNames[array_rand($firstNames)].' '.$lastNames[array_rand($lastNames)];
+    }
+
+    /**
+     * Generate a unique 4-character lowercase alphanumeric slug.
+     */
+    private function generateUniqueSlug(): string
+    {
+        $characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
+        $maxAttempts = 100;
+
+        for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
+            $slug = '';
+            for ($i = 0; $i < 4; $i++) {
+                $slug .= $characters[random_int(0, strlen($characters) - 1)];
+            }
+
+            if (! RegistrationSession::where('link_token', $slug)->exists()) {
+                return $slug;
+            }
+        }
+
+        // Fallback: if 4 chars collide too often, extend to 6 chars
+        $slug = '';
+        for ($i = 0; $i < 6; $i++) {
+            $slug .= $characters[random_int(0, strlen($characters) - 1)];
+        }
+
+        return $slug;
     }
 
     /**
