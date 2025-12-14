@@ -19,6 +19,10 @@ class PlacementService
 
     private array $classDistributions = [];
 
+    private float $idealClassSize = 0;
+
+    private int $totalClasses = 0;
+
     private int $totalProcessed = 0;
 
     private int $totalPlaced = 0;
@@ -56,8 +60,8 @@ class PlacementService
             // Calculate target proportions from total population
             $this->calculateTargetProportions($students);
 
-            // Initialize class distributions tracking
-            $this->initializeClassDistributions($sessionId);
+            // Initialize class distributions tracking (includes ideal class size calculation)
+            $this->initializeClassDistributions($sessionId, $totalStudents);
 
             // Process each student
             foreach ($students as $student) {
@@ -244,11 +248,18 @@ class PlacementService
         $this->targetProportions['races'] = $raceCounts->map(fn ($count) => $count / $total)->toArray();
     }
 
-    private function initializeClassDistributions(int $sessionId): void
+    private function initializeClassDistributions(int $sessionId, int $totalStudents): void
     {
         $classes = Classes::whereHas('registrationSessionTrack', function ($query) use ($sessionId) {
             $query->where('registration_session_id', $sessionId);
-        })->get();
+        })->where('is_active', true)->get();
+
+        $this->totalClasses = $classes->count();
+
+        // Calculate ideal class size for balancing across all tracks
+        $this->idealClassSize = $this->totalClasses > 0
+            ? $totalStudents / $this->totalClasses
+            : 0;
 
         foreach ($classes as $class) {
             $this->initializeClassDistribution($class);
@@ -272,14 +283,18 @@ class PlacementService
 
         $distribution = $this->classDistributions[$class->id];
         $currentCount = $distribution['count'];
+        $projectedCount = $currentCount + 1;
+
+        // Calculate class size deviation from ideal (balance across all tracks)
+        // Lower count = lower score (prefer classes with fewer students)
+        $sizeDeviation = $this->idealClassSize > 0
+            ? abs($projectedCount - $this->idealClassSize) / $this->idealClassSize
+            : 0;
 
         if ($currentCount === 0) {
-            // First student in class, no imbalance yet
-            return 0;
+            // First student in class - only consider size balance
+            return $sizeDeviation * 0.4;
         }
-
-        // Calculate projected count if we add this student
-        $projectedCount = $currentCount + 1;
 
         // Calculate projected gender distribution
         $projectedGenderCount = ($distribution['genders'][$student->gender] ?? 0) + 1;
@@ -294,8 +309,8 @@ class PlacementService
         $raceDeviation = abs($projectedRaceProportion - $targetRaceProportion);
 
         // Combined score (lower is better)
-        // Weight gender and race equally
-        return ($genderDeviation + $raceDeviation) / 2;
+        // Weights: Class size 40%, Gender 30%, Race 30%
+        return ($sizeDeviation * 0.4) + ($genderDeviation * 0.3) + ($raceDeviation * 0.3);
     }
 
     private function updateProgress(int $sessionId, int $processed, int $total): void

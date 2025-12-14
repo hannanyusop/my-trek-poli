@@ -251,6 +251,40 @@ export default function Show({ session, classes, students, registrationLink }: P
         });
     };
 
+    const handleOpenSession = () => {
+        Swal.fire({
+            title: 'Open Registration Session?',
+            text: 'Are you sure you want to open this registration session? Students will be able to register once opened.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Yes, open session',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                router.post(route('admin.registration-sessions.open', session.id), {}, {
+                    onSuccess: () => {
+                        Swal.fire({
+                            title: 'Opened!',
+                            text: 'Registration session has been opened successfully. Students can now register.',
+                            icon: 'success',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                    },
+                    onError: () => {
+                        Swal.fire({
+                            title: 'Error!',
+                            text: 'Failed to open session. Please try again.',
+                            icon: 'error'
+                        });
+                    }
+                });
+            }
+        });
+    };
+
     const handleCloseSession = () => {
         Swal.fire({
             title: 'Close Registration Session?',
@@ -465,7 +499,17 @@ export default function Show({ session, classes, students, registrationLink }: P
                                         </Link>
                                     )}
 
-                                    {session.status !== 'closed' && session.status !== 'processing' && session.status !== 'placement' && session.status !== 'published' && (
+                                    {session.status === 'draft' && (
+                                        <button
+                                            onClick={handleOpenSession}
+                                            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                        >
+                                            <PlayCircle className="mr-2 h-4 w-4" />
+                                            Open Session
+                                        </button>
+                                    )}
+
+                                    {session.status === 'open' && (
                                         <button
                                             onClick={handleCloseSession}
                                             className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"

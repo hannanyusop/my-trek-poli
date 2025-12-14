@@ -757,11 +757,33 @@ class RegistrationSessionController extends Controller
     }
 
     /**
+     * Open a registration session.
+     */
+    public function openSession(string $id)
+    {
+        $session = RegistrationSession::findOrFail($id);
+
+        if ($session->status !== \App\Enums\RegistrationSessionStatus::Draft) {
+            return back()->withErrors(['status' => 'Only draft sessions can be opened.']);
+        }
+
+        $session->update([
+            'status' => \App\Enums\RegistrationSessionStatus::Open,
+        ]);
+
+        return back()->with('success', 'Registration session has been opened successfully.');
+    }
+
+    /**
      * Close a registration session.
      */
     public function closeSession(string $id)
     {
         $session = RegistrationSession::findOrFail($id);
+
+        if ($session->status !== \App\Enums\RegistrationSessionStatus::Open) {
+            return back()->withErrors(['status' => 'Only open sessions can be closed.']);
+        }
 
         $session->update([
             'status' => \App\Enums\RegistrationSessionStatus::Closed,

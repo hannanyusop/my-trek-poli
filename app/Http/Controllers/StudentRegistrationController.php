@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\RegistrationSessionStatus;
 use App\Http\Requests\StudentRegistrationRequest;
 use App\Http\Requests\TrackPreferencesRequest;
+use App\Models\Placement;
 use App\Models\Race;
 use App\Models\RegistrationSession;
 use App\Models\RegistrationSessionTrack;
@@ -17,6 +19,70 @@ use Inertia\Response;
 
 class StudentRegistrationController extends Controller
 {
+    /**
+     * Check if the registration session status allows student access.
+     * Returns an Inertia response with appropriate message if access is denied.
+     */
+    private function checkSessionStatus(RegistrationSession $registrationSession, ?Student $student = null): ?Response
+    {
+        $status = $registrationSession->status;
+
+        // Draft status - registration not yet open
+        if ($status === RegistrationSessionStatus::Draft) {
+            return Inertia::render('StudentRegistration/SessionStatus', [
+                'registrationSession' => $registrationSession,
+                'status' => 'draft',
+                'title' => 'Registration Not Yet Open',
+                'message' => 'This registration session is currently in draft mode and has not been opened for student registration yet.',
+                'description' => 'Please check back later or contact your administrator for more information about when registration will begin.',
+                'icon' => 'clock',
+            ]);
+        }
+
+        // Closed status - registration period ended
+        if ($status === RegistrationSessionStatus::Closed) {
+            return Inertia::render('StudentRegistration/SessionStatus', [
+                'registrationSession' => $registrationSession,
+                'status' => 'closed',
+                'title' => 'Registration Closed',
+                'message' => 'The registration period for this session has ended.',
+                'description' => 'No new registrations or changes are being accepted at this time. If you have already submitted your registration, your preferences have been recorded.',
+                'icon' => 'lock',
+            ]);
+        }
+
+        // Processing status - placements being calculated
+        if ($status === RegistrationSessionStatus::Processing) {
+            return Inertia::render('StudentRegistration/SessionStatus', [
+                'registrationSession' => $registrationSession,
+                'status' => 'processing',
+                'title' => 'Processing in Progress',
+                'message' => 'Class placements are currently being processed.',
+                'description' => 'The system is assigning students to classes based on preferences and availability. Please check back later to view your results.',
+                'icon' => 'spinner',
+            ]);
+        }
+
+        // Placement status - placements completed, awaiting publish
+        if ($status === RegistrationSessionStatus::Placement) {
+            return Inertia::render('StudentRegistration/SessionStatus', [
+                'registrationSession' => $registrationSession,
+                'status' => 'placement',
+                'title' => 'Placements Under Review',
+                'message' => 'Class placements have been completed and are currently under review.',
+                'description' => 'Results will be published soon. Please check back later or wait for notification about your class assignment.',
+                'icon' => 'review',
+            ]);
+        }
+
+        // Published status - redirect to view results if student has submitted
+        if ($status === RegistrationSessionStatus::Published && $student && $student->is_submitted) {
+            return null; // Allow access - will be handled by the calling method
+        }
+
+        return null; // Open status or Published without submitted student - allow normal flow
+    }
+
     public function show(Request $request, string $token): Response|RedirectResponse
     {
         $registrationSession = RegistrationSession::where('link_token', $token)
@@ -24,13 +90,36 @@ class StudentRegistrationController extends Controller
 
         // Check if matric_number is provided in query parameters
         $matricNumber = $request->query('matric_number');
+        $student = null;
 
         if ($matricNumber) {
-            // Check if student exists with the provided matric number and correct session ID
             $student = Student::where('matric_number', $matricNumber)
                 ->where('registration_session_id', $registrationSession->id)
                 ->first();
+        }
 
+        // For non-open statuses with submitted student, redirect to summary (view only)
+        $nonOpenStatuses = [
+            RegistrationSessionStatus::Closed,
+            RegistrationSessionStatus::Processing,
+            RegistrationSessionStatus::Placement,
+            RegistrationSessionStatus::Published,
+        ];
+
+        if (in_array($registrationSession->status, $nonOpenStatuses) && $student && $student->is_submitted) {
+            return redirect()->route('student.registration.summary', [
+                'token' => $token,
+                'matric_number' => $matricNumber,
+            ]);
+        }
+
+        // Check session status for access restrictions
+        $statusResponse = $this->checkSessionStatus($registrationSession, $student);
+        if ($statusResponse) {
+            return $statusResponse;
+        }
+
+        if ($matricNumber) {
             if (! $student) {
                 return Inertia::render('StudentRegistration/Show', [
                     'registrationSession' => $registrationSession,
@@ -53,9 +142,38 @@ class StudentRegistrationController extends Controller
         ]);
     }
 
-    public function showForm(string $token): Response
+    public function showForm(string $token): Response|RedirectResponse
     {
         $registrationSession = RegistrationSession::where('link_token', $token)->firstOrFail();
+
+        $studentId = session('student_id');
+        $student = $studentId ? Student::find($studentId) : null;
+
+        // For non-open statuses with submitted student, redirect to summary (view only)
+        $nonOpenStatuses = [
+            RegistrationSessionStatus::Closed,
+            RegistrationSessionStatus::Processing,
+            RegistrationSessionStatus::Placement,
+            RegistrationSessionStatus::Published,
+        ];
+
+        if (in_array($registrationSession->status, $nonOpenStatuses) && $student && $student->is_submitted) {
+            return redirect()->route('student.registration.summary', [
+                'token' => $token,
+                'matric_number' => $student->matric_number,
+            ]);
+        }
+
+        // Check session status for access restrictions
+        $statusResponse = $this->checkSessionStatus($registrationSession);
+        if ($statusResponse) {
+            return $statusResponse;
+        }
+
+        // Require student lookup first - redirect if no student data in session
+        if (! $studentId) {
+            return redirect()->route('student.registration.show', $token);
+        }
 
         $tracks = RegistrationSessionTrack::where('registration_session_id', $registrationSession->id)->with('track')->get();
         $races = Race::where('is_active', true)->orderBy('name')->get();
@@ -63,7 +181,7 @@ class StudentRegistrationController extends Controller
 
         return Inertia::render('StudentRegistration/Form', [
             'registrationSession' => $registrationSession,
-            'student' => null,
+            'student' => $student,
             'tracks' => $tracks,
             'races' => $races,
             'religions' => $religions,
@@ -82,6 +200,27 @@ class StudentRegistrationController extends Controller
             ->where('registration_session_id', $registrationSession->id)
             ->first();
 
+        // For non-open statuses with submitted student, redirect to summary (view only)
+        $nonOpenStatuses = [
+            RegistrationSessionStatus::Closed,
+            RegistrationSessionStatus::Processing,
+            RegistrationSessionStatus::Placement,
+            RegistrationSessionStatus::Published,
+        ];
+
+        if (in_array($registrationSession->status, $nonOpenStatuses) && $student && $student->is_submitted) {
+            return redirect()->route('student.registration.summary', [
+                'token' => $token,
+                'matric_number' => $request->matric_number,
+            ]);
+        }
+
+        // Check session status for access restrictions
+        $statusResponse = $this->checkSessionStatus($registrationSession, $student);
+        if ($statusResponse) {
+            return $statusResponse;
+        }
+
         if (! $student) {
             return redirect()->back()->withErrors(['matric_number' => 'Student not found. Please ask assistance from admin.']);
         }
@@ -92,6 +231,9 @@ class StudentRegistrationController extends Controller
                 'matric_number' => $request->matric_number,
             ]);
         }
+
+        // Set student session for form access
+        session(['student_id' => $student->id]);
 
         $tracks = RegistrationSessionTrack::where('registration_session_id', $registrationSession->id)->with('track')->get();
         $races = Race::where('is_active', true)->orderBy('name')->get();
@@ -106,9 +248,15 @@ class StudentRegistrationController extends Controller
         ]);
     }
 
-    public function storeStudent(StudentRegistrationRequest $request, string $token): RedirectResponse
+    public function storeStudent(StudentRegistrationRequest $request, string $token): RedirectResponse|Response
     {
         $registrationSession = RegistrationSession::where('link_token', $token)->firstOrFail();
+
+        // Check session status - only allow during Open status
+        $statusResponse = $this->checkSessionStatus($registrationSession);
+        if ($statusResponse) {
+            return $statusResponse;
+        }
 
         $existingStudent = Student::where('matric_number', $request->matric_number)
             ->where('registration_session_id', $registrationSession->id)
@@ -133,10 +281,33 @@ class StudentRegistrationController extends Controller
         return redirect()->route('student.registration.tracks', $token);
     }
 
-    public function showTrackSelection(string $token): Response
+    public function showTrackSelection(string $token): Response|RedirectResponse
     {
         $registrationSession = RegistrationSession::where('link_token', $token)->firstOrFail();
+
         $studentId = session('student_id');
+        $student = $studentId ? Student::find($studentId) : null;
+
+        // For non-open statuses with submitted student, redirect to summary (view only)
+        $nonOpenStatuses = [
+            RegistrationSessionStatus::Closed,
+            RegistrationSessionStatus::Processing,
+            RegistrationSessionStatus::Placement,
+            RegistrationSessionStatus::Published,
+        ];
+
+        if (in_array($registrationSession->status, $nonOpenStatuses) && $student && $student->is_submitted) {
+            return redirect()->route('student.registration.summary', [
+                'token' => $token,
+                'matric_number' => $student->matric_number,
+            ]);
+        }
+
+        // Check session status - only allow during Open status
+        $statusResponse = $this->checkSessionStatus($registrationSession);
+        if ($statusResponse) {
+            return $statusResponse;
+        }
 
         if (! $studentId) {
             return Inertia::render('StudentRegistration/Show', [
@@ -160,9 +331,16 @@ class StudentRegistrationController extends Controller
         ]);
     }
 
-    public function storeTrackPreferences(TrackPreferencesRequest $request, string $token): RedirectResponse
+    public function storeTrackPreferences(TrackPreferencesRequest $request, string $token): RedirectResponse|Response
     {
         $registrationSession = RegistrationSession::where('link_token', $token)->firstOrFail();
+
+        // Check session status - only allow during Open status
+        $statusResponse = $this->checkSessionStatus($registrationSession);
+        if ($statusResponse) {
+            return $statusResponse;
+        }
+
         $studentId = session('student_id');
 
         if (! $studentId) {
@@ -184,10 +362,33 @@ class StudentRegistrationController extends Controller
         return redirect()->route('student.registration.preview', $token);
     }
 
-    public function showPreview(string $token): Response
+    public function showPreview(string $token): Response|RedirectResponse
     {
         $registrationSession = RegistrationSession::where('link_token', $token)->firstOrFail();
+
         $studentId = session('student_id');
+        $student = $studentId ? Student::find($studentId) : null;
+
+        // For non-open statuses with submitted student, redirect to summary (view only)
+        $nonOpenStatuses = [
+            RegistrationSessionStatus::Closed,
+            RegistrationSessionStatus::Processing,
+            RegistrationSessionStatus::Placement,
+            RegistrationSessionStatus::Published,
+        ];
+
+        if (in_array($registrationSession->status, $nonOpenStatuses) && $student && $student->is_submitted) {
+            return redirect()->route('student.registration.summary', [
+                'token' => $token,
+                'matric_number' => $student->matric_number,
+            ]);
+        }
+
+        // Check session status - only allow during Open status
+        $statusResponse = $this->checkSessionStatus($registrationSession);
+        if ($statusResponse) {
+            return $statusResponse;
+        }
 
         if (! $studentId) {
             return Inertia::render('StudentRegistration/Show', [
@@ -210,10 +411,33 @@ class StudentRegistrationController extends Controller
         ]);
     }
 
-    public function submitRegistration(string $token): Response
+    public function submitRegistration(string $token): Response|RedirectResponse
     {
         $registrationSession = RegistrationSession::where('link_token', $token)->firstOrFail();
+
         $studentId = session('student_id');
+        $student = $studentId ? Student::find($studentId) : null;
+
+        // For non-open statuses with submitted student, redirect to summary (view only)
+        $nonOpenStatuses = [
+            RegistrationSessionStatus::Closed,
+            RegistrationSessionStatus::Processing,
+            RegistrationSessionStatus::Placement,
+            RegistrationSessionStatus::Published,
+        ];
+
+        if (in_array($registrationSession->status, $nonOpenStatuses) && $student && $student->is_submitted) {
+            return redirect()->route('student.registration.summary', [
+                'token' => $token,
+                'matric_number' => $student->matric_number,
+            ]);
+        }
+
+        // Check session status - only allow during Open status
+        $statusResponse = $this->checkSessionStatus($registrationSession);
+        if ($statusResponse) {
+            return $statusResponse;
+        }
 
         if (! $studentId) {
             return Inertia::render('StudentRegistration/Show', [
@@ -236,8 +460,8 @@ class StudentRegistrationController extends Controller
 
         // Get student placement if available (only when session status is 'published')
         $placement = null;
-        if ($registrationSession->status === 'published') {
-            $placement = \App\Models\Placement::where('student_id', $student->id)
+        if ($registrationSession->status === RegistrationSessionStatus::Published) {
+            $placement = Placement::where('student_id', $student->id)
                 ->where('is_active', true)
                 ->with(['assignedClass.registrationSessionTrack.track'])
                 ->first();
@@ -268,8 +492,8 @@ class StudentRegistrationController extends Controller
 
         // Get student placement if available (only when session status is 'published')
         $placement = null;
-        if ($registrationSession->status === 'published') {
-            $placement = \App\Models\Placement::where('student_id', $student->id)
+        if ($registrationSession->status === RegistrationSessionStatus::Published) {
+            $placement = Placement::where('student_id', $student->id)
                 ->where('is_active', true)
                 ->with(['assignedClass.registrationSessionTrack.track'])
                 ->first();

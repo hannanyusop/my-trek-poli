@@ -27,27 +27,26 @@ export default function Show({ registrationSession, error }: Props) {
     const storageKey = `student_data_${registrationSession.link_token}`;
 
 
-    // Check localStorage on page load and redirect if student data exists
+    // Check localStorage on page load and redirect if student has submitted
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const stored = localStorage.getItem(storageKey);
             if (stored) {
                 try {
                     const studentData = JSON.parse(stored);
-                    // Check if student has completed submission
+                    // Only redirect to summary if student has completed submission
                     const submissionKey = `student_submitted_${registrationSession.link_token}`;
                     const isSubmitted = localStorage.getItem(submissionKey) === 'true';
-                    
+
                     if (isSubmitted && studentData.matric_number) {
                         // Redirect to summary page
                         router.visit(route('student.registration.summary', [
                             registrationSession.link_token,
                             studentData.matric_number
                         ]));
-                    } else if (studentData.matric_number) {
-                        // Redirect to form page if we have matric number
-                        router.visit(route('student.registration.form', registrationSession.link_token));
                     }
+                    // Note: We don't auto-redirect to form anymore as the backend
+                    // requires a valid session from lookupStudent first
                 } catch (e) {
                     // Invalid data, clear it
                     localStorage.removeItem(storageKey);

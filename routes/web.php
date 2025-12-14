@@ -99,6 +99,7 @@ Route::middleware('auth')->group(function () {
         Route::post('registration-sessions/{registration_session}/confirm-upload', [RegistrationSessionController::class, 'confirmUpload'])->name('registration-sessions.confirm-upload');
         Route::post('registration-sessions/{registration_session}/generate-dummy', [RegistrationSessionController::class, 'generateDummyStudent'])->name('registration-sessions.generate-dummy');
         Route::post('registration-sessions/{registration_session}/generate-test-student', [RegistrationSessionController::class, 'generateTestStudent'])->name('registration-sessions.generate-test-student');
+        Route::post('registration-sessions/{registration_session}/open', [RegistrationSessionController::class, 'openSession'])->name('registration-sessions.open');
         Route::post('registration-sessions/{registration_session}/close', [RegistrationSessionController::class, 'closeSession'])->name('registration-sessions.close');
 
         // Placement routes

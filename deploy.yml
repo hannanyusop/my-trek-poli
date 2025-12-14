@@ -14,7 +14,7 @@ hosts:
     keep_releases: 2
     repository: 'git@github.com:hannanyusop/my-trek-poli.git'
     remote_user: 'deployer'
-    hostname: '34.124.242.89'
+    hostname: '34.143.231.253'
     port: '22'
     deploy_path: '/var/www/myTrek'
     branch: 'feature/main'
@@ -29,8 +29,10 @@ tasks:
     - artisan:route:cache
     - artisan:view:cache
     - deploy:publish
+  npm:install:
+    - run: source ~/.nvm/nvm.sh && cd {{release_path}} && npm install
   npm:build:
-      - run: cd {{release_path}} && npm run build
+    - run: source ~/.nvm/nvm.sh && cd {{release_path}} && npm run build
   migrate:
     - artisan:migrate
 
