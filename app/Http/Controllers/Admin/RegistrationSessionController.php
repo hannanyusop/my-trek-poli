@@ -754,6 +754,34 @@ class RegistrationSessionController extends Controller
     }
 
     /**
+     * Retry placement processing when status is stuck in Processing.
+     */
+    public function retryPlacement(string $id)
+    {
+        $session = RegistrationSession::findOrFail($id);
+
+        if ($session->status !== \App\Enums\RegistrationSessionStatus::Processing) {
+            return back()->withErrors(['status' => 'Session must be in Processing status to retry.']);
+        }
+
+        // Check if there's already a pending job for this session to prevent duplicates
+        // The payload contains serialized PHP object inside JSON, so quotes are escaped
+        $hasPendingJob = \DB::table('jobs')
+            ->where('payload', 'like', '%ProcessPlacementJob%')
+            ->where('payload', 'like', '%sessionId\\\";i:'.$session->id.';%')
+            ->exists();
+
+        if ($hasPendingJob) {
+            return back()->withErrors(['job' => 'A placement job is already pending in the queue. Please wait for it to complete.']);
+        }
+
+        // Dispatch a new job to retry processing
+        ProcessPlacementJob::dispatch($session->id);
+
+        return back()->with('success', 'Placement processing has been restarted. This may take a few minutes.');
+    }
+
+    /**
      * Get placement processing progress.
      */
     public function placementProgress(string $id)

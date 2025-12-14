@@ -1,7 +1,7 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useState, useEffect, useRef } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
-import { Calendar, Users, BookOpen, Clock, ArrowLeft, QrCode, User, Target, Monitor, RotateCcw, FileSpreadsheet, FileText, Upload, UserPlus, Trash2, ChevronDown, MoreVertical, Copy, Check, Sparkles, XCircle, PlayCircle, Settings, Eye } from 'lucide-react';
+import { Calendar, Users, BookOpen, Clock, ArrowLeft, QrCode, User, Target, Monitor, RotateCcw, FileSpreadsheet, FileText, Upload, UserPlus, Trash2, ChevronDown, MoreVertical, Copy, Check, Sparkles, XCircle, PlayCircle, Settings, Eye, RefreshCw } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { RegistrationSession, Student, Class, PageProps } from '@/types';
 import { getStatusColor } from '@/lib/utils';
@@ -415,6 +415,64 @@ export default function Show({ session, classes, students, registrationLink }: P
         });
     };
 
+    const handleRetryPlacement = () => {
+        Swal.fire({
+            title: 'Retry Placement?',
+            html: `
+                <p class="text-sm text-gray-600 mb-2">The placement job may have failed or is stuck.</p>
+                <p class="text-sm text-gray-600">This will restart the placement process. Are you sure you want to proceed?</p>
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#f59e0b',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Retry Placement',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'Retrying...',
+                    text: 'Restarting placement process. Please wait...',
+                    icon: 'info',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                router.post(route('admin.registration-sessions.retry-placement', session.id), {}, {
+                    onSuccess: () => {
+                        Swal.fire({
+                            title: 'Restarted!',
+                            text: 'Placement processing has been restarted. The page will refresh when complete.',
+                            icon: 'success',
+                            timer: 3000,
+                            showConfirmButton: false
+                        });
+
+                        // Poll for completion every 3 seconds
+                        const pollInterval = setInterval(() => {
+                            router.reload({ only: ['session'] });
+                        }, 3000);
+
+                        // Stop polling after 5 minutes
+                        setTimeout(() => clearInterval(pollInterval), 300000);
+                    },
+                    onError: (errors) => {
+                        const errorMessage = Object.values(errors).flat().join(' ');
+                        Swal.fire({
+                            title: 'Error!',
+                            text: errorMessage || 'Failed to retry placement. Please try again.',
+                            icon: 'error'
+                        });
+                    }
+                });
+            }
+        });
+    };
+
     return (
         <AppLayout  title="Registration Session">
             <Head title={`Registration Session  - ${session.name}`} />
@@ -464,10 +522,20 @@ export default function Show({ session, classes, students, registrationLink }: P
                                     )}
 
                                     {session.status === 'processing' && (
-                                        <div className="flex items-center px-4 py-2 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-lg">
-                                            <div className="animate-spin mr-2 h-4 w-4 border-2 border-yellow-600 border-t-transparent rounded-full"></div>
-                                            Processing...
-                                        </div>
+                                        <>
+                                            <div className="flex items-center px-4 py-2 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-lg">
+                                                <div className="animate-spin mr-2 h-4 w-4 border-2 border-yellow-600 border-t-transparent rounded-full"></div>
+                                                Processing...
+                                            </div>
+                                            <button
+                                                onClick={handleRetryPlacement}
+                                                className="flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+                                                title="Retry if the job failed or is stuck"
+                                            >
+                                                <RefreshCw className="mr-2 h-4 w-4" />
+                                                Retry
+                                            </button>
+                                        </>
                                     )}
 
                                     {session.status === 'placement' && (

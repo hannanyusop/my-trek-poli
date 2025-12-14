@@ -104,6 +104,7 @@ Route::middleware('auth')->group(function () {
 
         // Placement routes
         Route::post('registration-sessions/{registration_session}/start-placement', [RegistrationSessionController::class, 'startPlacement'])->name('registration-sessions.start-placement');
+        Route::post('registration-sessions/{registration_session}/retry-placement', [RegistrationSessionController::class, 'retryPlacement'])->name('registration-sessions.retry-placement');
         Route::get('registration-sessions/{registration_session}/placement-progress', [RegistrationSessionController::class, 'placementProgress'])->name('registration-sessions.placement-progress');
         Route::post('registration-sessions/{registration_session}/publish', [RegistrationSessionController::class, 'publishResults'])->name('registration-sessions.publish');
         Route::get('registration-sessions/{registration_session}/placement', [\App\Http\Controllers\Admin\PlacementController::class, 'index'])->name('registration-sessions.placement.index');
