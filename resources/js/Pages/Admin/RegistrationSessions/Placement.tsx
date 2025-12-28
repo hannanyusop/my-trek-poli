@@ -1,7 +1,7 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
-import { ArrowLeft, AlertCircle, CheckCircle, AlertTriangle, Users, BarChart3, Trash2, Search, X } from 'lucide-react';
+import { ArrowLeft, AlertCircle, CheckCircle, AlertTriangle, Users, BarChart3, Trash2, Search, X, Download } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 interface Class {
@@ -213,15 +213,24 @@ export default function Placement({ session, students, classes, stats }: Props) 
                                 <p className="mt-1 text-gray-600 dark:text-gray-400">{session.name}</p>
                             </div>
                         </div>
-                        {!isReadOnly && (
-                            <button
-                                onClick={handleClearPlacements}
-                                className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                        <div className="flex items-center gap-2">
+                            <a
+                                href={route('admin.registration-sessions.placement.export-all', session.id)}
+                                className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                             >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Clear All Placements
-                            </button>
-                        )}
+                                <Download className="mr-2 h-4 w-4" />
+                                Export All
+                            </a>
+                            {!isReadOnly && (
+                                <button
+                                    onClick={handleClearPlacements}
+                                    className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                                >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Clear All Placements
+                                </button>
+                            )}
+                        </div>
                     </div>
 
                     {/* Read-Only Notice */}
@@ -523,6 +532,13 @@ export default function Placement({ session, students, classes, stats }: Props) 
                                                         {cls.available_slots}
                                                     </span>
                                                 </div>
+                                                <a
+                                                    href={route('admin.registration-sessions.placement.export-class', { registration_session: session.id, class: cls.id })}
+                                                    className="flex items-center px-3 py-1.5 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors"
+                                                >
+                                                    <Download className="mr-1.5 h-3.5 w-3.5" />
+                                                    Export
+                                                </a>
                                             </div>
                                         </div>
                                     </div>

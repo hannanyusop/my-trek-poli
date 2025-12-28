@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Enums\RegistrationSessionStatus;
+use App\Exports\PlacementsExport;
 use App\Http\Controllers\Controller;
 use App\Models\Classes;
 use App\Models\Placement;
@@ -11,6 +12,7 @@ use App\Models\RegistrationSession;
 use App\Models\Student;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Maatwebsite\Excel\Facades\Excel;
 
 class PlacementController extends Controller
 {
@@ -277,5 +279,34 @@ class PlacementController extends Controller
 
         return redirect()->route('admin.registration-sessions.show', $sessionId)
             ->with('success', 'All placements have been cleared. You can start the placement process again.');
+    }
+
+    /**
+     * Export all placements to Excel.
+     */
+    public function exportAll(string $sessionId)
+    {
+        $session = RegistrationSession::findOrFail($sessionId);
+        $filename = 'placements_all_'.str_replace(['/', '\\', ' '], '_', $session->name).'_'.now()->format('Y-m-d').'.xlsx';
+
+        return Excel::download(
+            new PlacementsExport($sessionId),
+            $filename
+        );
+    }
+
+    /**
+     * Export placements for a specific class to Excel.
+     */
+    public function exportByClass(string $sessionId, string $classId)
+    {
+        $session = RegistrationSession::findOrFail($sessionId);
+        $class = Classes::findOrFail($classId);
+        $filename = 'placements_'.str_replace(['/', '\\', ' '], '_', $class->name).'_'.now()->format('Y-m-d').'.xlsx';
+
+        return Excel::download(
+            new PlacementsExport($sessionId, (int) $classId),
+            $filename
+        );
     }
 }
