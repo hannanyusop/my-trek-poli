@@ -1,7 +1,7 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
-import { ArrowLeft, AlertCircle, CheckCircle, AlertTriangle, Users, BarChart3, Trash2, Search, X, Download } from 'lucide-react';
+import { ArrowLeft, AlertCircle, CheckCircle, AlertTriangle, Users, BarChart3, Trash2, Search, X, Download, Eye, Mail, Phone, ListOrdered } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 interface Class {
@@ -15,15 +15,23 @@ interface Class {
     race_distribution: Record<string, number>;
 }
 
+interface TrackChoice {
+    priority: number;
+    track_name: string;
+}
+
 interface Student {
     id: number;
     name: string;
     matric_number: string;
     gender: string;
     race: string;
+    email?: string;
+    phone?: string;
     placement_status: string;
     placement_notes?: string;
     track_priority?: number | null;
+    track_choices?: TrackChoice[];
     assigned_class?: {
         id: number;
         name: string;
@@ -61,6 +69,7 @@ export default function Placement({ session, students, classes, stats }: Props) 
     const [searchMatric, setSearchMatric] = useState<string>('');
     const [searchGender, setSearchGender] = useState<string>('');
     const [searchRace, setSearchRace] = useState<string>('');
+    const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
     // Check if editing is allowed (not published)
     const isReadOnly = session.status === 'published';
@@ -396,16 +405,23 @@ export default function Placement({ session, students, classes, stats }: Props) 
                                                     )}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                                    {!isReadOnly ? (
+                                                    <div className="flex items-center gap-3">
                                                         <button
-                                                            onClick={() => handleReassign(student.id, student.name, student.assigned_class?.id)}
-                                                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                            onClick={() => setSelectedStudent(student)}
+                                                            className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                                                            title="View Details"
                                                         >
-                                                            Reassign
+                                                            <Eye className="h-4 w-4" />
                                                         </button>
-                                                    ) : (
-                                                        <span className="text-gray-400 dark:text-gray-500">-</span>
-                                                    )}
+                                                        {!isReadOnly && (
+                                                            <button
+                                                                onClick={() => handleReassign(student.id, student.name, student.assigned_class?.id)}
+                                                                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                            >
+                                                                Reassign
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
@@ -584,16 +600,23 @@ export default function Placement({ session, students, classes, stats }: Props) 
                                                                 )}
                                                             </td>
                                                             <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                                                {!isReadOnly ? (
+                                                                <div className="flex items-center gap-3">
                                                                     <button
-                                                                        onClick={() => handleReassign(student.id, student.name, student.assigned_class?.id)}
-                                                                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                        onClick={() => setSelectedStudent(student)}
+                                                                        className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                                                                        title="View Details"
                                                                     >
-                                                                        Reassign
+                                                                        <Eye className="h-4 w-4" />
                                                                     </button>
-                                                                ) : (
-                                                                    <span className="text-gray-400 dark:text-gray-500">-</span>
-                                                                )}
+                                                                    {!isReadOnly && (
+                                                                        <button
+                                                                            onClick={() => handleReassign(student.id, student.name, student.assigned_class?.id)}
+                                                                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                        >
+                                                                            Reassign
+                                                                        </button>
+                                                                    )}
+                                                                </div>
                                                             </td>
                                                         </tr>
                                                     ))}
@@ -655,16 +678,23 @@ export default function Placement({ session, students, classes, stats }: Props) 
                                                             )}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                                            {!isReadOnly ? (
+                                                            <div className="flex items-center gap-3">
                                                                 <button
-                                                                    onClick={() => handleReassign(student.id, student.name)}
-                                                                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                    onClick={() => setSelectedStudent(student)}
+                                                                    className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                                                                    title="View Details"
                                                                 >
-                                                                    Assign
+                                                                    <Eye className="h-4 w-4" />
                                                                 </button>
-                                                            ) : (
-                                                                <span className="text-gray-400 dark:text-gray-500">-</span>
-                                                            )}
+                                                                {!isReadOnly && (
+                                                                    <button
+                                                                        onClick={() => handleReassign(student.id, student.name)}
+                                                                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                    >
+                                                                        Assign
+                                                                    </button>
+                                                                )}
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -677,6 +707,165 @@ export default function Placement({ session, students, classes, stats }: Props) 
                     )}
                 </div>
             </div>
+
+            {/* View Student Modal */}
+            {selectedStudent && (
+                <div className="fixed inset-0 z-50 overflow-y-auto">
+                    <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                        {/* Backdrop */}
+                        <div
+                            className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+                            onClick={() => setSelectedStudent(null)}
+                        />
+
+                        {/* Modal Content */}
+                        <div className="relative inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                            {/* Header */}
+                            <div className="bg-blue-50 dark:bg-blue-900/20 px-6 py-4 border-b border-blue-200 dark:border-blue-800">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-blue-100 dark:bg-blue-800 rounded-lg">
+                                            <Eye className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                                Student Details
+                                            </h3>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                View student information and track choices
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => setSelectedStudent(null)}
+                                        className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                                    >
+                                        <X className="h-5 w-5" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Body */}
+                            <div className="px-6 py-4 space-y-6">
+                                {/* Basic Info */}
+                                <div>
+                                    <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+                                        Basic Information
+                                    </h4>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <p className="text-sm text-gray-500 dark:text-gray-400">Name</p>
+                                            <p className="text-sm font-medium text-gray-900 dark:text-white">{selectedStudent.name}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-gray-500 dark:text-gray-400">Matric Number</p>
+                                            <p className="text-sm font-medium text-gray-900 dark:text-white">{selectedStudent.matric_number}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-gray-500 dark:text-gray-400">Gender</p>
+                                            <p className="text-sm font-medium text-gray-900 dark:text-white">{selectedStudent.gender}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-gray-500 dark:text-gray-400">Race</p>
+                                            <p className="text-sm font-medium text-gray-900 dark:text-white">{selectedStudent.race}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Contact Info */}
+                                {(selectedStudent.email || selectedStudent.phone) && (
+                                    <div>
+                                        <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+                                            Contact Information
+                                        </h4>
+                                        <div className="space-y-2">
+                                            {selectedStudent.email && (
+                                                <div className="flex items-center gap-2">
+                                                    <Mail className="h-4 w-4 text-gray-400" />
+                                                    <span className="text-sm text-gray-900 dark:text-white">{selectedStudent.email}</span>
+                                                </div>
+                                            )}
+                                            {selectedStudent.phone && (
+                                                <div className="flex items-center gap-2">
+                                                    <Phone className="h-4 w-4 text-gray-400" />
+                                                    <span className="text-sm text-gray-900 dark:text-white">{selectedStudent.phone}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Track Choices */}
+                                <div>
+                                    <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3 flex items-center gap-2">
+                                        <ListOrdered className="h-4 w-4" />
+                                        Track Choices
+                                    </h4>
+                                    {selectedStudent.track_choices && selectedStudent.track_choices.length > 0 ? (
+                                        <div className="space-y-2">
+                                            {selectedStudent.track_choices.map((choice) => (
+                                                <div
+                                                    key={choice.priority}
+                                                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <span className={`px-2 py-1 text-xs font-semibold rounded ${getPriorityBadge(choice.priority)}`}>
+                                                            {getPriorityLabel(choice.priority)}
+                                                        </span>
+                                                        <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                                            {choice.track_name}
+                                                        </span>
+                                                    </div>
+                                                    {selectedStudent.assigned_class?.registration_session_track.track.name === choice.track_name && (
+                                                        <span className="text-xs text-green-600 dark:text-green-400 font-medium">
+                                                            Assigned
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">No track choices recorded.</p>
+                                    )}
+                                </div>
+
+                                {/* Placement Status */}
+                                <div>
+                                    <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+                                        Placement Status
+                                    </h4>
+                                    <div className="flex items-center gap-3">
+                                        <span className={`px-2 py-1 text-xs font-medium rounded-full flex items-center gap-1 w-fit ${getStatusBadge(selectedStudent.placement_status)}`}>
+                                            {getStatusIcon(selectedStudent.placement_status)}
+                                            {selectedStudent.placement_status.replace('_', ' ')}
+                                        </span>
+                                        {selectedStudent.assigned_class && (
+                                            <span className="text-sm text-gray-600 dark:text-gray-400">
+                                                → {selectedStudent.assigned_class.name} ({selectedStudent.assigned_class.registration_session_track.track.name})
+                                            </span>
+                                        )}
+                                    </div>
+                                    {selectedStudent.placement_notes && (
+                                        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 italic">
+                                            {selectedStudent.placement_notes}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Footer */}
+                            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600">
+                                <button
+                                    onClick={() => setSelectedStudent(null)}
+                                    className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </AppLayout>
     );
 }

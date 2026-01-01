@@ -39,6 +39,8 @@ class PlacementController extends Controller
                     'matric_number' => $student->matric_number,
                     'gender' => $student->gender,
                     'race' => $student->race,
+                    'email' => $student->email,
+                    'phone' => $student->phone,
                     'placement_status' => $placement?->placement_status ?? 'pending',
                     'placement_notes' => $placement?->placement_notes,
                     'track_priority' => $placement?->track_priority,
@@ -51,6 +53,14 @@ class PlacementController extends Controller
                             ],
                         ],
                     ] : null,
+                    'track_choices' => $student->preferences
+                        ->sortBy('priority')
+                        ->map(fn ($pref) => [
+                            'priority' => $pref->priority,
+                            'track_name' => $pref->registrationSessionTrack->track->name,
+                        ])
+                        ->values()
+                        ->all(),
                 ];
             })
             ->sortBy(fn ($s) => match ($s['placement_status']) {
