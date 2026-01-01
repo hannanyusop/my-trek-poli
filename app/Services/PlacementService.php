@@ -7,7 +7,6 @@ use App\Models\Placement;
 use App\Models\PlacementLog;
 use App\Models\RegistrationSession;
 use App\Models\Student;
-use App\Models\StudentPreference;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -100,35 +99,12 @@ class PlacementService
 
     private function processStudent(Student $student, int $sessionId): void
     {
-        // Get student preferences ordered by priority
-        $preferences = $student->preferences()->orderBy('priority', 'asc')->get();
-
-        if ($preferences->isEmpty()) {
-            $this->flagStudent($student, 'No preferences found', $sessionId);
-
-            return;
-        }
-
-        // Try each preference (1st → 2nd → 3rd)
-        foreach ($preferences as $preference) {
-            $result = $this->tryAssignToTrack($student, $preference, $sessionId);
-
-            if ($result['success']) {
-                $this->totalPlaced++;
-
-                return;
-            }
-        }
-
-        // If we get here, no assignment was possible
-        $this->flagStudent($student, 'All preferred tracks/classes are full or imbalanced', $sessionId);
-    }
-
-    private function tryAssignToTrack(Student $student, StudentPreference $preference, int $sessionId): array
-    {
-        // Get all classes for this track with available capacity
-        $classes = Classes::where('registration_session_track_id', $preference->registration_session_track_id)
+        // Get ALL active classes in the session with available capacity (global balance)
+        $classes = Classes::whereHas('registrationSessionTrack', function ($query) use ($sessionId) {
+            $query->where('registration_session_id', $sessionId);
+        })
             ->where('is_active', true)
+            ->with('registrationSessionTrack')
             ->get()
             ->filter(function ($class) {
                 $assignedCount = $this->classDistributions[$class->id]['count'] ?? 0;
@@ -137,10 +113,12 @@ class PlacementService
             });
 
         if ($classes->isEmpty()) {
-            return ['success' => false, 'reason' => 'No available classes'];
+            $this->flagStudent($student, 'No available classes with capacity', $sessionId);
+
+            return;
         }
 
-        // Find the best class based on balance score
+        // Find the best class based on balance score (globally across all classes)
         $bestClass = null;
         $bestScore = PHP_FLOAT_MAX;
 
@@ -154,15 +132,20 @@ class PlacementService
         }
 
         if ($bestClass) {
-            $this->assignStudentToClass($student, $bestClass, $preference->priority, $sessionId);
+            // Calculate track priority for logging (if student had this track in preferences)
+            $trackId = $bestClass->registrationSessionTrack->track_id ?? null;
+            $preferences = $student->preferences()->with('registrationSessionTrack')->get();
+            $preference = $preferences->first(fn ($p) => $p->registrationSessionTrack?->track_id === $trackId);
+            $priority = $preference?->priority;
 
-            return ['success' => true];
+            $this->assignStudentToClass($student, $bestClass, $priority, $sessionId);
+            $this->totalPlaced++;
+        } else {
+            $this->flagStudent($student, 'No suitable class found', $sessionId);
         }
-
-        return ['success' => false, 'reason' => 'No suitable class found'];
     }
 
-    private function assignStudentToClass(Student $student, Classes $class, int $priority, int $sessionId): void
+    private function assignStudentToClass(Student $student, Classes $class, ?int $priority, int $sessionId): void
     {
         // Deactivate any existing active placement
         Placement::where('student_id', $student->id)
@@ -285,15 +268,14 @@ class PlacementService
         $currentCount = $distribution['count'];
         $projectedCount = $currentCount + 1;
 
-        // Calculate class size deviation from ideal (balance across all tracks)
-        // Lower count = lower score (prefer classes with fewer students)
-        $sizeDeviation = $this->idealClassSize > 0
-            ? abs($projectedCount - $this->idealClassSize) / $this->idealClassSize
-            : 0;
+        // Prefer classes with fewer students for even distribution
+        // Lower count = lower score = better (e.g., 18 students / 2 classes = 9 each)
+        // Use currentCount directly to balance by count, not by fill percentage
+        $sizeDeviation = $currentCount;
 
         if ($currentCount === 0) {
             // First student in class - only consider size balance
-            return $sizeDeviation * 0.4;
+            return $sizeDeviation * 0.7;
         }
 
         // Calculate projected gender distribution
@@ -309,8 +291,9 @@ class PlacementService
         $raceDeviation = abs($projectedRaceProportion - $targetRaceProportion);
 
         // Combined score (lower is better)
-        // Weights: Class size 40%, Gender 30%, Race 30%
-        return ($sizeDeviation * 0.4) + ($genderDeviation * 0.3) + ($raceDeviation * 0.3);
+        // Weights: Class size 70% (primary), Gender 15%, Race 15%
+        // Size is prioritized to ensure balanced student counts across classes
+        return ($sizeDeviation * 0.7) + ($genderDeviation * 0.15) + ($raceDeviation * 0.15);
     }
 
     private function updateProgress(int $sessionId, int $processed, int $total): void
@@ -326,5 +309,46 @@ class PlacementService
     public function getProgress(int $sessionId): ?array
     {
         return Cache::get("placement_progress_{$sessionId}");
+    }
+
+    /**
+     * Clear all placements for a session and re-run the placement process.
+     */
+    public function regenerateSession(int $sessionId): array
+    {
+        // Clear all existing active placements for this session
+        $this->clearSessionPlacements($sessionId);
+
+        // Re-run the placement process
+        return $this->processSession($sessionId);
+    }
+
+    /**
+     * Clear all active placements for a session.
+     */
+    public function clearSessionPlacements(int $sessionId): void
+    {
+        // First, delete all inactive placements to avoid unique constraint violation
+        // (student_id, is_active) must be unique
+        Placement::whereHas('student', function ($query) use ($sessionId) {
+            $query->where('registration_session_id', $sessionId);
+        })
+            ->where('is_active', false)
+            ->delete();
+
+        // Now deactivate all active placements for this session
+        Placement::whereHas('student', function ($query) use ($sessionId) {
+            $query->where('registration_session_id', $sessionId);
+        })
+            ->where('is_active', true)
+            ->update(['is_active' => false]);
+
+        // Log the clear action
+        PlacementLog::create([
+            'registration_session_id' => $sessionId,
+            'student_id' => null,
+            'action' => 'cleared',
+            'notes' => 'All placements cleared for regeneration',
+        ]);
     }
 }

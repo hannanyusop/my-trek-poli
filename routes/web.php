@@ -116,6 +116,7 @@ Route::middleware('auth')->group(function () {
         Route::put('registration-sessions/{registration_session}/placement/students/{student}', [\App\Http\Controllers\Admin\PlacementController::class, 'update'])->name('registration-sessions.placement.update');
         Route::post('registration-sessions/{registration_session}/placement/swap', [\App\Http\Controllers\Admin\PlacementController::class, 'swap'])->name('registration-sessions.placement.swap');
         Route::delete('registration-sessions/{registration_session}/placement/clear', [\App\Http\Controllers\Admin\PlacementController::class, 'clear'])->name('registration-sessions.placement.clear');
+        Route::post('registration-sessions/{registration_session}/placement/regenerate', [\App\Http\Controllers\Admin\PlacementController::class, 'regenerate'])->name('registration-sessions.placement.regenerate');
         Route::get('registration-sessions/{registration_session}/placement/export', [\App\Http\Controllers\Admin\PlacementController::class, 'exportAll'])->name('registration-sessions.placement.export-all');
         Route::get('registration-sessions/{registration_session}/placement/export/{class}', [\App\Http\Controllers\Admin\PlacementController::class, 'exportByClass'])->name('registration-sessions.placement.export-class');
 

@@ -10,6 +10,7 @@ use App\Models\Placement;
 use App\Models\PlacementLog;
 use App\Models\RegistrationSession;
 use App\Models\Student;
+use App\Services\PlacementService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Maatwebsite\Excel\Facades\Excel;
@@ -258,6 +259,14 @@ class PlacementController extends Controller
             return back()->withErrors(['error' => 'Cannot clear placements after results have been published.']);
         }
 
+        // First, delete all inactive placements to avoid unique constraint violation
+        // (student_id, is_active) must be unique
+        Placement::whereHas('student', function ($query) use ($sessionId) {
+            $query->where('registration_session_id', $sessionId);
+        })
+            ->where('is_active', false)
+            ->delete();
+
         // Deactivate all active placements for this session
         Placement::whereHas('student', function ($query) use ($sessionId) {
             $query->where('registration_session_id', $sessionId);
@@ -308,5 +317,31 @@ class PlacementController extends Controller
             new PlacementsExport($sessionId, (int) $classId),
             $filename
         );
+    }
+
+    /**
+     * Clear all placements and regenerate them.
+     */
+    public function regenerate(string $sessionId, PlacementService $placementService)
+    {
+        $session = RegistrationSession::findOrFail($sessionId);
+
+        // Prevent regenerating if results are published
+        if ($session->status === RegistrationSessionStatus::Published) {
+            return back()->withErrors(['error' => 'Cannot regenerate placements after results have been published.']);
+        }
+
+        // Must be in Placement status to regenerate
+        if ($session->status !== RegistrationSessionStatus::Placement) {
+            return back()->withErrors(['status' => 'Session must be in Placement status to regenerate.']);
+        }
+
+        $result = $placementService->regenerateSession($session->id);
+
+        if ($result['success']) {
+            return back()->with('success', $result['message']);
+        }
+
+        return back()->withErrors(['error' => $result['message']]);
     }
 }
