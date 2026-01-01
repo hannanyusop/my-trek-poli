@@ -1,17 +1,27 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Form } from '@inertiajs/react';
-import { X, User, Plus } from 'lucide-react';
+import { X, BookOpen, Save } from 'lucide-react';
+import { Class } from '@/types';
 
 interface Props {
     isOpen: boolean;
     onClose: () => void;
     sessionId: number;
+    classData: Class | null;
 }
 
-export default function AddSingleStudentModal({ isOpen, onClose, sessionId }: Props) {
-    const [matricNumber, setMatricNumber] = useState('');
+export default function EditClassModal({ isOpen, onClose, sessionId, classData }: Props) {
+    const [name, setName] = useState('');
+    const [quota, setQuota] = useState(1);
 
-    if (!isOpen) return null;
+    useEffect(() => {
+        if (classData) {
+            setName(classData.name);
+            setQuota(classData.quota);
+        }
+    }, [classData]);
+
+    if (!isOpen || !classData) return null;
 
     return (
         <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -28,15 +38,15 @@ export default function AddSingleStudentModal({ isOpen, onClose, sessionId }: Pr
                     <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                         <div className="sm:flex sm:items-start">
                             <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900 sm:mx-0 sm:h-10 sm:w-10">
-                                <User className="h-6 w-6 text-blue-600 dark:text-blue-300" />
+                                <BookOpen className="h-6 w-6 text-blue-600 dark:text-blue-300" />
                             </div>
                             <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left flex-1">
                                 <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
-                                    Add Single Student
+                                    Edit Class
                                 </h3>
                                 <div className="mt-2">
                                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                                        Enter the matric number to add a student to this registration session.
+                                        Update the class name and quota.
                                     </p>
                                 </div>
                             </div>
@@ -50,59 +60,69 @@ export default function AddSingleStudentModal({ isOpen, onClose, sessionId }: Pr
 
                         <div className="mt-6">
                             <Form
-                                action={route('admin.registration-sessions.add-student', sessionId)}
-                                method="post"
+                                action={route('admin.registration-sessions.update-class', [sessionId, classData.id])}
+                                method="put"
                                 onSuccess={() => {
-                                    setMatricNumber('');
                                     onClose();
                                 }}
                                 resetOnError={false}
-                                resetOnSuccess={true}
                             >
-                                {({ errors, processing, wasSuccessful }) => (
+                                {({ errors, processing }) => (
                                     <>
                                         <div className="mb-4">
-                                            <label htmlFor="matric_number" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                Matric Number
+                                            <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                Class Name
                                             </label>
                                             <input
                                                 type="text"
-                                                id="matric_number"
-                                                name="matric_number"
-                                                value={matricNumber}
-                                                onChange={(e) => setMatricNumber(e.target.value.toUpperCase())}
-                                                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm uppercase"
-                                                placeholder="Enter matric number"
+                                                id="name"
+                                                name="name"
+                                                value={name}
+                                                onChange={(e) => setName(e.target.value)}
+                                                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm"
+                                                placeholder="Enter class name"
                                                 required
                                             />
-                                            {errors.matric_number && (
-                                                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.matric_number}</p>
+                                            {errors.name && (
+                                                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.name}</p>
                                             )}
                                         </div>
 
-                                        {wasSuccessful && (
-                                            <div className="mb-4 p-4 bg-green-100 dark:bg-green-900 border border-green-300 dark:border-green-700 rounded-md">
-                                                <p className="text-sm text-green-700 dark:text-green-300">
-                                                    Student added successfully!
-                                                </p>
-                                            </div>
-                                        )}
+                                        <div className="mb-4">
+                                            <label htmlFor="quota" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                Quota
+                                            </label>
+                                            <input
+                                                type="number"
+                                                id="quota"
+                                                name="quota"
+                                                value={quota}
+                                                onChange={(e) => setQuota(parseInt(e.target.value) || 1)}
+                                                min="1"
+                                                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm"
+                                                placeholder="Enter quota"
+                                                required
+                                            />
+                                            {errors.quota && (
+                                                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.quota}</p>
+                                            )}
+                                        </div>
 
-                                        <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                                        <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse rounded-b-lg -mx-4 -mb-4 sm:-mx-6 sm:-mb-4">
                                             <button
                                                 type="submit"
-                                                disabled={processing || !matricNumber.trim()}
+                                                disabled={processing || !name.trim()}
                                                 className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
                                                 {processing ? (
                                                     <>
                                                         <div className="animate-spin -ml-1 mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                                                        Adding...
+                                                        Saving...
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <Plus className="mr-2 h-4 w-4" />
-                                                        Add Student
+                                                        <Save className="mr-2 h-4 w-4" />
+                                                        Save Changes
                                                     </>
                                                 )}
                                             </button>

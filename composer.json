@@ -76,7 +76,8 @@
         "test": [
             "@php artisan config:clear --ansi",
             "@php artisan test"
-        ]
+        ],
+        "dep": "vendor/bin/dep"
     },
     "extra": {
         "laravel": {

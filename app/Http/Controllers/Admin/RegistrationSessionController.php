@@ -125,6 +125,11 @@ class RegistrationSessionController extends Controller
         // Get students registered for this session
         $students = Student::where('registration_session_id', $session->id)->get();
 
+        // Get available tracks for this session (for adding new classes)
+        $availableTracks = \App\Models\RegistrationSessionTrack::with('track')
+            ->where('registration_session_id', $session->id)
+            ->get();
+
         // Generate registration link - for now just use a placeholder route
         // You can adjust this based on your actual student registration route
         $registrationLink = url("/register/{$session->link_token}");
@@ -133,6 +138,7 @@ class RegistrationSessionController extends Controller
             'session' => $session,
             'classes' => $classes,
             'students' => $students,
+            'availableTracks' => $availableTracks,
             'registrationLink' => $registrationLink,
         ]);
     }
@@ -846,6 +852,123 @@ class RegistrationSessionController extends Controller
         ]);
 
         return back()->with('success', 'Registration session has been closed successfully.');
+    }
+
+    /**
+     * Update a class (name and/or quota).
+     */
+    public function updateClass(Request $request, string $sessionId, string $classId)
+    {
+        $session = RegistrationSession::findOrFail($sessionId);
+
+        // Check if session status allows class management
+        if (! in_array($session->status, [
+            \App\Enums\RegistrationSessionStatus::Draft,
+            \App\Enums\RegistrationSessionStatus::Open,
+            \App\Enums\RegistrationSessionStatus::Closed,
+        ])) {
+            return back()->withErrors(['status' => 'Class management is only available before placement.']);
+        }
+
+        $class = Classes::with('registrationSessionTrack')
+            ->where('id', $classId)
+            ->whereHas('registrationSessionTrack', function ($query) use ($sessionId) {
+                $query->where('registration_session_id', $sessionId);
+            })
+            ->firstOrFail();
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'quota' => 'required|integer|min:1',
+        ]);
+
+        $class->update([
+            'name' => $request->name,
+            'quota' => $request->quota,
+        ]);
+
+        return back()->with('success', 'Class updated successfully.');
+    }
+
+    /**
+     * Delete a class (only if not the last class of a track).
+     */
+    public function deleteClass(string $sessionId, string $classId)
+    {
+        $session = RegistrationSession::findOrFail($sessionId);
+
+        // Check if session status allows class management
+        if (! in_array($session->status, [
+            \App\Enums\RegistrationSessionStatus::Draft,
+            \App\Enums\RegistrationSessionStatus::Open,
+            \App\Enums\RegistrationSessionStatus::Closed,
+        ])) {
+            return back()->withErrors(['status' => 'Class management is only available before placement.']);
+        }
+
+        $class = Classes::with('registrationSessionTrack')
+            ->where('id', $classId)
+            ->whereHas('registrationSessionTrack', function ($query) use ($sessionId) {
+                $query->where('registration_session_id', $sessionId);
+            })
+            ->firstOrFail();
+
+        // Check if this is the last class for this track
+        $classCountForTrack = Classes::where('registration_session_track_id', $class->registration_session_track_id)->count();
+
+        if ($classCountForTrack <= 1) {
+            return back()->withErrors(['class' => 'Cannot delete the last class of a track. Each track must have at least one class.']);
+        }
+
+        $class->delete();
+
+        return back()->with('success', 'Class deleted successfully.');
+    }
+
+    /**
+     * Add a new class to a registration session track.
+     */
+    public function addClass(Request $request, string $sessionId)
+    {
+        $session = RegistrationSession::findOrFail($sessionId);
+
+        // Check if session status allows class management
+        if (! in_array($session->status, [
+            \App\Enums\RegistrationSessionStatus::Draft,
+            \App\Enums\RegistrationSessionStatus::Open,
+            \App\Enums\RegistrationSessionStatus::Closed,
+        ])) {
+            return back()->withErrors(['status' => 'Class management is only available before placement.']);
+        }
+
+        $request->validate([
+            'registration_session_track_id' => [
+                'required',
+                'exists:registration_session_tracks,id',
+                function ($attribute, $value, $fail) use ($sessionId) {
+                    $trackBelongsToSession = \App\Models\RegistrationSessionTrack::where('id', $value)
+                        ->where('registration_session_id', $sessionId)
+                        ->exists();
+
+                    if (! $trackBelongsToSession) {
+                        $fail('The selected track does not belong to this session.');
+                    }
+                },
+            ],
+            'name' => 'required|string|max:255',
+            'quota' => 'required|integer|min:1',
+        ]);
+
+        $sessionTrack = \App\Models\RegistrationSessionTrack::findOrFail($request->registration_session_track_id);
+
+        $sessionTrack->classes()->create([
+            'name' => $request->name,
+            'quota' => $request->quota,
+            'current_count' => 0,
+            'is_active' => true,
+        ]);
+
+        return back()->with('success', 'Class added successfully.');
     }
 
     /**

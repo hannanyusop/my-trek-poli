@@ -102,6 +102,11 @@ Route::middleware('auth')->group(function () {
         Route::post('registration-sessions/{registration_session}/open', [RegistrationSessionController::class, 'openSession'])->name('registration-sessions.open');
         Route::post('registration-sessions/{registration_session}/close', [RegistrationSessionController::class, 'closeSession'])->name('registration-sessions.close');
 
+        // Class management routes
+        Route::put('registration-sessions/{registration_session}/classes/{class}', [RegistrationSessionController::class, 'updateClass'])->name('registration-sessions.update-class');
+        Route::delete('registration-sessions/{registration_session}/classes/{class}', [RegistrationSessionController::class, 'deleteClass'])->name('registration-sessions.delete-class');
+        Route::post('registration-sessions/{registration_session}/classes', [RegistrationSessionController::class, 'addClass'])->name('registration-sessions.add-class');
+
         // Placement routes
         Route::post('registration-sessions/{registration_session}/start-placement', [RegistrationSessionController::class, 'startPlacement'])->name('registration-sessions.start-placement');
         Route::post('registration-sessions/{registration_session}/retry-placement', [RegistrationSessionController::class, 'retryPlacement'])->name('registration-sessions.retry-placement');

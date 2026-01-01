@@ -1,25 +1,90 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useState, useEffect, useRef } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
-import { Calendar, Users, BookOpen, Clock, ArrowLeft, QrCode, User, Target, Monitor, RotateCcw, FileSpreadsheet, FileText, Upload, UserPlus, Trash2, ChevronDown, MoreVertical, Copy, Check, Sparkles, XCircle, PlayCircle, Settings, Eye, RefreshCw } from 'lucide-react';
+import { Calendar, Users, BookOpen, Clock, ArrowLeft, QrCode, User, Target, Monitor, RotateCcw, FileSpreadsheet, FileText, Upload, UserPlus, Trash2, ChevronDown, MoreVertical, Copy, Check, Sparkles, XCircle, PlayCircle, Settings, Eye, RefreshCw, Edit, Plus } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { RegistrationSession, Student, Class, PageProps } from '@/types';
+import { RegistrationSession, Student, Class, RegistrationSessionTrack, PageProps } from '@/types';
 import { getStatusColor } from '@/lib/utils';
 import AddSingleStudentModal from '@/Components/AddSingleStudentModal';
+import EditClassModal from '@/Components/EditClassModal';
+import AddClassModal from '@/Components/AddClassModal';
 import Swal from 'sweetalert2';
 
 interface Props {
     session: RegistrationSession;
     classes: Class[];
     students: Student[];
+    availableTracks: RegistrationSessionTrack[];
     registrationLink: string;
 }
 
-export default function Show({ session, classes, students, registrationLink }: Props) {
+export default function Show({ session, classes, students, availableTracks, registrationLink }: Props) {
     const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
     const [isActionsDropdownOpen, setIsActionsDropdownOpen] = useState(false);
     const [isCopied, setIsCopied] = useState(false);
+    const [isEditClassModalOpen, setIsEditClassModalOpen] = useState(false);
+    const [isAddClassModalOpen, setIsAddClassModalOpen] = useState(false);
+    const [selectedClass, setSelectedClass] = useState<Class | null>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Check if class management is allowed (before placement)
+    const canManageClasses = ['draft', 'open', 'closed'].includes(session.status);
+
+    // Count classes per track for delete validation
+    const getClassCountForTrack = (trackId: number) => {
+        return classes.filter(c => c.registration_session_track.id === trackId).length;
+    };
+
+    const handleEditClass = (classItem: Class) => {
+        setSelectedClass(classItem);
+        setIsEditClassModalOpen(true);
+    };
+
+    const handleDeleteClass = (classItem: Class) => {
+        const classCountForTrack = getClassCountForTrack(classItem.registration_session_track.id);
+
+        if (classCountForTrack <= 1) {
+            Swal.fire({
+                title: 'Cannot Delete',
+                text: 'Cannot delete the last class of a track. Each track must have at least one class.',
+                icon: 'error'
+            });
+            return;
+        }
+
+        Swal.fire({
+            title: 'Delete Class?',
+            text: `Are you sure you want to delete "${classItem.name}"? This action cannot be undone.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Yes, delete',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                router.delete(route('admin.registration-sessions.delete-class', [session.id, classItem.id]), {
+                    onSuccess: () => {
+                        Swal.fire({
+                            title: 'Deleted!',
+                            text: 'Class has been deleted successfully.',
+                            icon: 'success',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                    },
+                    onError: (errors) => {
+                        const errorMessage = Object.values(errors).flat().join(' ');
+                        Swal.fire({
+                            title: 'Error!',
+                            text: errorMessage || 'Failed to delete class. Please try again.',
+                            icon: 'error'
+                        });
+                    }
+                });
+            }
+        });
+    };
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -673,10 +738,21 @@ export default function Show({ session, classes, students, registrationLink }: P
                                 <div className="lg:col-span-2">
                                     {/* Classes List with Quota */}
                                     <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
-                                        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                                            <BookOpen className="mr-2 h-5 w-5" />
-                                            Available Classes
-                                        </h2>
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
+                                                <BookOpen className="mr-2 h-5 w-5" />
+                                                Available Classes
+                                            </h2>
+                                            {canManageClasses && (
+                                                <button
+                                                    onClick={() => setIsAddClassModalOpen(true)}
+                                                    className="flex items-center px-3 py-2 text-sm font-medium text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900 rounded-md hover:bg-green-200 dark:hover:bg-green-800 transition-colors"
+                                                >
+                                                    <Plus className="mr-2 h-4 w-4" />
+                                                    Add Class
+                                                </button>
+                                            )}
+                                        </div>
 
                                         {classes.length > 0 ? (
                                             <div className="overflow-x-auto">
@@ -698,6 +774,11 @@ export default function Show({ session, classes, students, registrationLink }: P
                                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                                                 Status
                                                             </th>
+                                                            {canManageClasses && (
+                                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                                    Actions
+                                                                </th>
+                                                            )}
                                                         </tr>
                                                     </thead>
                                                     <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -744,6 +825,32 @@ export default function Show({ session, classes, students, registrationLink }: P
                                                                             {isFullyBooked ? 'Full' : `${availableSlots} slots`}
                                                                         </span>
                                                                     </td>
+                                                                    {canManageClasses && (
+                                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <button
+                                                                                    onClick={() => handleEditClass(classItem)}
+                                                                                    className="flex items-center px-3 py-1 text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+                                                                                    title="Edit class"
+                                                                                >
+                                                                                    <Edit className="mr-1 h-3 w-3" />
+                                                                                    Edit
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={() => handleDeleteClass(classItem)}
+                                                                                    className={`flex items-center px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+                                                                                        getClassCountForTrack(classItem.registration_session_track.id) <= 1
+                                                                                            ? 'text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 cursor-not-allowed'
+                                                                                            : 'text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900 hover:bg-red-200 dark:hover:bg-red-800'
+                                                                                    }`}
+                                                                                    title={getClassCountForTrack(classItem.registration_session_track.id) <= 1 ? 'Cannot delete the last class of a track' : 'Delete class'}
+                                                                                >
+                                                                                    <Trash2 className="mr-1 h-3 w-3" />
+                                                                                    Delete
+                                                                                </button>
+                                                                            </div>
+                                                                        </td>
+                                                                    )}
                                                                 </tr>
                                                             );
                                                         })}
@@ -954,6 +1061,23 @@ export default function Show({ session, classes, students, registrationLink }: P
                 isOpen={isAddStudentModalOpen}
                 onClose={() => setIsAddStudentModalOpen(false)}
                 sessionId={session.id}
+            />
+
+            <EditClassModal
+                isOpen={isEditClassModalOpen}
+                onClose={() => {
+                    setIsEditClassModalOpen(false);
+                    setSelectedClass(null);
+                }}
+                sessionId={session.id}
+                classData={selectedClass}
+            />
+
+            <AddClassModal
+                isOpen={isAddClassModalOpen}
+                onClose={() => setIsAddClassModalOpen(false)}
+                sessionId={session.id}
+                availableTracks={availableTracks}
             />
         </AppLayout>
     );
