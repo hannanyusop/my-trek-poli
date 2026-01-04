@@ -1,8 +1,9 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
-import { ArrowLeft, AlertCircle, CheckCircle, AlertTriangle, Users, BarChart3, Trash2, Search, X, Download, Eye, Mail, Phone, ListOrdered } from 'lucide-react';
+import { ArrowLeft, AlertCircle, CheckCircle, AlertTriangle, Users, BarChart3, Trash2, Search, X, Download, Eye, Mail, Phone, ListOrdered, PieChart } from 'lucide-react';
 import Swal from 'sweetalert2';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 
 interface Class {
     id: number;
@@ -62,8 +63,29 @@ interface Props {
     stats: Stats;
 }
 
+// Color palettes for charts
+const GENDER_COLORS: Record<string, string> = {
+    'Male': '#3b82f6',
+    'Female': '#ec4899',
+    'Lelaki': '#3b82f6',
+    'Perempuan': '#ec4899',
+};
+
+const RACE_COLORS: Record<string, string> = {
+    'Malay': '#10b981',
+    'Chinese': '#f59e0b',
+    'Indian': '#8b5cf6',
+    'Melayu': '#10b981',
+    'Cina': '#f59e0b',
+    'India': '#8b5cf6',
+    'Other': '#6b7280',
+    'Lain-lain': '#6b7280',
+    'Bumiputera Sabah': '#06b6d4',
+    'Bumiputera Sarawak': '#14b8a6',
+};
+
 export default function Placement({ session, students, classes, stats }: Props) {
-    const [viewMode, setViewMode] = useState<'by-status' | 'by-class'>('by-status');
+    const [viewMode, setViewMode] = useState<'by-status' | 'by-class' | 'charts'>('by-status');
     const [filter, setFilter] = useState<string>('all');
     const [searchName, setSearchName] = useState<string>('');
     const [searchMatric, setSearchMatric] = useState<string>('');
@@ -73,6 +95,56 @@ export default function Placement({ session, students, classes, stats }: Props) 
 
     // Check if editing is allowed (not published)
     const isReadOnly = session.status === 'published';
+
+    // Prepare chart data
+    const chartData = useMemo(() => {
+        // Get all unique genders and races across all classes
+        const allGenders = new Set<string>();
+        const allRaces = new Set<string>();
+
+        classes.forEach(cls => {
+            Object.keys(cls.gender_distribution || {}).forEach(g => allGenders.add(g));
+            Object.keys(cls.race_distribution || {}).forEach(r => allRaces.add(r));
+        });
+
+        const genderKeys = Array.from(allGenders);
+        const raceKeys = Array.from(allRaces);
+
+        // Gender distribution data for stacked bar chart
+        const genderChartData = classes.map(cls => {
+            const data: Record<string, string | number> = { name: cls.name, track: cls.track };
+            genderKeys.forEach(gender => {
+                data[gender] = cls.gender_distribution?.[gender] || 0;
+            });
+            return data;
+        });
+
+        // Race distribution data for stacked bar chart
+        const raceChartData = classes.map(cls => {
+            const data: Record<string, string | number> = { name: cls.name, track: cls.track };
+            raceKeys.forEach(race => {
+                data[race] = cls.race_distribution?.[race] || 0;
+            });
+            return data;
+        });
+
+        // Capacity data (assigned vs quota)
+        const capacityChartData = classes.map(cls => ({
+            name: cls.name,
+            track: cls.track,
+            assigned: cls.assigned_count,
+            available: cls.available_slots,
+            quota: cls.quota,
+        }));
+
+        return {
+            genderKeys,
+            raceKeys,
+            genderChartData,
+            raceChartData,
+            capacityChartData,
+        };
+    }, [classes]);
 
     const filteredStudents = students.filter(student => {
         if (filter === 'all') return true;
@@ -330,6 +402,17 @@ export default function Placement({ session, students, classes, stats }: Props) 
                                 }`}
                             >
                                 By Class
+                            </button>
+                            <button
+                                onClick={() => setViewMode('charts')}
+                                className={`px-6 py-3 text-sm font-medium transition-colors flex items-center gap-2 ${
+                                    viewMode === 'charts'
+                                        ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
+                                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                                }`}
+                            >
+                                <PieChart className="h-4 w-4" />
+                                Charts
                             </button>
                         </div>
                     </div>
@@ -703,6 +786,184 @@ export default function Placement({ session, students, classes, stats }: Props) 
                                     </div>
                                 </div>
                             )}
+                        </div>
+                    )}
+
+                    {/* Charts View */}
+                    {viewMode === 'charts' && (
+                        <div className="space-y-6">
+                            {/* Class Capacity Chart */}
+                            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                                <div className="flex items-center gap-2 mb-6">
+                                    <BarChart3 className="h-5 w-5 text-blue-500" />
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Class Capacity</h3>
+                                </div>
+                                <div className="h-80">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={chartData.capacityChartData} layout="vertical">
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                                            <XAxis type="number" stroke="#9ca3af" />
+                                            <YAxis
+                                                type="category"
+                                                dataKey="name"
+                                                width={120}
+                                                stroke="#9ca3af"
+                                                tick={{ fontSize: 12 }}
+                                            />
+                                            <Tooltip
+                                                contentStyle={{
+                                                    backgroundColor: '#1f2937',
+                                                    border: '1px solid #374151',
+                                                    borderRadius: '8px',
+                                                    color: '#f9fafb',
+                                                }}
+                                                labelStyle={{ color: '#f9fafb' }}
+                                            />
+                                            <Legend />
+                                            <Bar dataKey="assigned" name="Assigned" fill="#10b981" stackId="capacity" />
+                                            <Bar dataKey="available" name="Available" fill="#6b7280" stackId="capacity" />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+
+                            {/* Gender Distribution Chart */}
+                            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                                <div className="flex items-center gap-2 mb-6">
+                                    <Users className="h-5 w-5 text-pink-500" />
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Gender Distribution by Class</h3>
+                                </div>
+                                <div className="h-80">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={chartData.genderChartData}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                                            <XAxis
+                                                dataKey="name"
+                                                stroke="#9ca3af"
+                                                tick={{ fontSize: 12 }}
+                                                angle={-45}
+                                                textAnchor="end"
+                                                height={80}
+                                            />
+                                            <YAxis stroke="#9ca3af" />
+                                            <Tooltip
+                                                contentStyle={{
+                                                    backgroundColor: '#1f2937',
+                                                    border: '1px solid #374151',
+                                                    borderRadius: '8px',
+                                                    color: '#f9fafb',
+                                                }}
+                                                labelStyle={{ color: '#f9fafb' }}
+                                            />
+                                            <Legend />
+                                            {chartData.genderKeys.map((gender) => (
+                                                <Bar
+                                                    key={gender}
+                                                    dataKey={gender}
+                                                    name={gender}
+                                                    fill={GENDER_COLORS[gender] || '#6b7280'}
+                                                    stackId="gender"
+                                                />
+                                            ))}
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+
+                            {/* Race Distribution Chart */}
+                            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                                <div className="flex items-center gap-2 mb-6">
+                                    <PieChart className="h-5 w-5 text-purple-500" />
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Race Distribution by Class</h3>
+                                </div>
+                                <div className="h-96">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={chartData.raceChartData}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                                            <XAxis
+                                                dataKey="name"
+                                                stroke="#9ca3af"
+                                                tick={{ fontSize: 12 }}
+                                                angle={-45}
+                                                textAnchor="end"
+                                                height={80}
+                                            />
+                                            <YAxis stroke="#9ca3af" />
+                                            <Tooltip
+                                                contentStyle={{
+                                                    backgroundColor: '#1f2937',
+                                                    border: '1px solid #374151',
+                                                    borderRadius: '8px',
+                                                    color: '#f9fafb',
+                                                }}
+                                                labelStyle={{ color: '#f9fafb' }}
+                                            />
+                                            <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                                            {chartData.raceKeys.map((race) => (
+                                                <Bar
+                                                    key={race}
+                                                    dataKey={race}
+                                                    name={race}
+                                                    fill={RACE_COLORS[race] || '#6b7280'}
+                                                    stackId="race"
+                                                />
+                                            ))}
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+
+                            {/* Summary Table */}
+                            <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+                                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Distribution Summary</h3>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                        <thead className="bg-gray-50 dark:bg-gray-700">
+                                            <tr>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Class</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Track</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Assigned / Quota</th>
+                                                {chartData.genderKeys.map((gender) => (
+                                                    <th key={gender} className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                                                        {gender}
+                                                    </th>
+                                                ))}
+                                                {chartData.raceKeys.map((race) => (
+                                                    <th key={race} className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                                                        {race}
+                                                    </th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                            {classes.map((cls) => (
+                                                <tr key={cls.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{cls.name}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{cls.track}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                                        <span className={`font-semibold ${cls.assigned_count === cls.quota ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400'}`}>
+                                                            {cls.assigned_count}
+                                                        </span>
+                                                        <span className="text-gray-500 dark:text-gray-400"> / {cls.quota}</span>
+                                                    </td>
+                                                    {chartData.genderKeys.map((gender) => (
+                                                        <td key={gender} className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                                                            {cls.gender_distribution?.[gender] || 0}
+                                                        </td>
+                                                    ))}
+                                                    {chartData.raceKeys.map((race) => (
+                                                        <td key={race} className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                                                            {cls.race_distribution?.[race] || 0}
+                                                        </td>
+                                                    ))}
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>
