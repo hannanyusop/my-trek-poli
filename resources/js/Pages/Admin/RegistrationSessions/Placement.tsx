@@ -137,14 +137,65 @@ export default function Placement({ session, students, classes, stats }: Props) 
             quota: cls.quota,
         }));
 
+        // Priority distribution data (how many students got their 1st, 2nd, 3rd choice)
+        const priorityCounts: Record<string, number> = {};
+        students.forEach(student => {
+            if (student.track_priority) {
+                const label = student.track_priority === 1 ? '1st Choice'
+                    : student.track_priority === 2 ? '2nd Choice'
+                    : student.track_priority === 3 ? '3rd Choice'
+                    : `${student.track_priority}th Choice`;
+                priorityCounts[label] = (priorityCounts[label] || 0) + 1;
+            }
+        });
+
+        const priorityChartData = Object.entries(priorityCounts)
+            .sort((a, b) => {
+                const getOrder = (label: string) => {
+                    if (label.startsWith('1st')) return 1;
+                    if (label.startsWith('2nd')) return 2;
+                    if (label.startsWith('3rd')) return 3;
+                    return parseInt(label) || 99;
+                };
+                return getOrder(a[0]) - getOrder(b[0]);
+            })
+            .map(([priority, count]) => ({
+                priority,
+                count,
+            }));
+
+        // Priority distribution by class
+        const priorityByClassData = classes.map(cls => {
+            const classStudents = students.filter(s => s.assigned_class?.id === cls.id);
+            const priorities: Record<string, number> = {
+                '1st Choice': 0,
+                '2nd Choice': 0,
+                '3rd Choice': 0,
+                'Other': 0,
+            };
+            classStudents.forEach(student => {
+                if (student.track_priority === 1) priorities['1st Choice']++;
+                else if (student.track_priority === 2) priorities['2nd Choice']++;
+                else if (student.track_priority === 3) priorities['3rd Choice']++;
+                else if (student.track_priority) priorities['Other']++;
+            });
+            return {
+                name: cls.name,
+                track: cls.track,
+                ...priorities,
+            };
+        });
+
         return {
             genderKeys,
             raceKeys,
             genderChartData,
             raceChartData,
             capacityChartData,
+            priorityChartData,
+            priorityByClassData,
         };
-    }, [classes]);
+    }, [classes, students]);
 
     const filteredStudents = students.filter(student => {
         if (filter === 'all') return true;
@@ -824,6 +875,85 @@ export default function Placement({ session, students, classes, stats }: Props) 
                                             <Bar dataKey="available" name="Available" fill="#6b7280" stackId="capacity" />
                                         </BarChart>
                                     </ResponsiveContainer>
+                                </div>
+                            </div>
+
+                            {/* Priority Distribution Chart */}
+                            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                                <div className="flex items-center gap-2 mb-6">
+                                    <ListOrdered className="h-5 w-5 text-amber-500" />
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Student Distribution by Priority</h3>
+                                </div>
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    {/* Overall Priority Distribution */}
+                                    <div>
+                                        <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-4">Overall Priority Distribution</h4>
+                                        <div className="h-64">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <BarChart data={chartData.priorityChartData}>
+                                                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                                                    <XAxis dataKey="priority" stroke="#9ca3af" tick={{ fontSize: 12 }} />
+                                                    <YAxis stroke="#9ca3af" />
+                                                    <Tooltip
+                                                        contentStyle={{
+                                                            backgroundColor: '#1f2937',
+                                                            border: '1px solid #374151',
+                                                            borderRadius: '8px',
+                                                            color: '#f9fafb',
+                                                        }}
+                                                        labelStyle={{ color: '#f9fafb' }}
+                                                    />
+                                                    <Bar dataKey="count" name="Students" fill="#f59e0b">
+                                                        {chartData.priorityChartData.map((entry, index) => (
+                                                            <Cell
+                                                                key={`cell-${index}`}
+                                                                fill={
+                                                                    entry.priority === '1st Choice' ? '#10b981'
+                                                                    : entry.priority === '2nd Choice' ? '#3b82f6'
+                                                                    : entry.priority === '3rd Choice' ? '#f59e0b'
+                                                                    : '#6b7280'
+                                                                }
+                                                            />
+                                                        ))}
+                                                    </Bar>
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </div>
+                                    {/* Priority by Class */}
+                                    <div>
+                                        <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-4">Priority Distribution by Class</h4>
+                                        <div className="h-64">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <BarChart data={chartData.priorityByClassData}>
+                                                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                                                    <XAxis
+                                                        dataKey="name"
+                                                        stroke="#9ca3af"
+                                                        tick={{ fontSize: 10 }}
+                                                        angle={-45}
+                                                        textAnchor="end"
+                                                        height={60}
+                                                    />
+                                                    <YAxis stroke="#9ca3af" />
+                                                    <Tooltip
+                                                        contentStyle={{
+                                                            backgroundColor: '#1f2937',
+                                                            border: '1px solid #374151',
+                                                            borderRadius: '8px',
+                                                            color: '#f9fafb',
+                                                        }}
+                                                        labelStyle={{ color: '#f9fafb' }}
+                                                    />
+                                                    <Legend />
+                                                    <Bar dataKey="1st Choice" name="1st Choice" fill="#10b981" stackId="priority" />
+                                                    <Bar dataKey="2nd Choice" name="2nd Choice" fill="#3b82f6" stackId="priority" />
+                                                    <Bar dataKey="3rd Choice" name="3rd Choice" fill="#f59e0b" stackId="priority" />
+                                                    <Bar dataKey="Other" name="Other" fill="#6b7280" stackId="priority" />
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
