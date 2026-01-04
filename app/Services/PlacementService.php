@@ -18,7 +18,12 @@ class PlacementService
 
     private array $classDistributions = [];
 
-    private float $idealClassSize = 0;
+    /**
+     * Ideal target size for each class, considering quotas.
+     *
+     * @var array<int, float>
+     */
+    private array $idealClassSizes = [];
 
     private int $totalClasses = 0;
 
@@ -239,13 +244,67 @@ class PlacementService
 
         $this->totalClasses = $classes->count();
 
-        // Calculate ideal class size for balancing across all tracks
-        $this->idealClassSize = $this->totalClasses > 0
-            ? $totalStudents / $this->totalClasses
-            : 0;
+        // Calculate ideal class sizes considering quotas
+        // This ensures balanced distribution while respecting quota limits
+        $this->calculateIdealClassSizes($classes, $totalStudents);
 
         foreach ($classes as $class) {
             $this->initializeClassDistribution($class);
+        }
+    }
+
+    /**
+     * Calculate ideal class sizes considering quota limits.
+     *
+     * Example: 100 students, 4 classes with quotas [30, 30, 30, 20]
+     * - Initial ideal: 100/4 = 25 per class
+     * - Class D (quota 20) is capped, so it gets 20
+     * - Remaining: 80 students for 3 classes = ~27 each
+     * - Final: A=27, B=27, C=26, D=20
+     */
+    private function calculateIdealClassSizes(Collection $classes, int $totalStudents): void
+    {
+        if ($classes->isEmpty()) {
+            return;
+        }
+
+        // Build array of class IDs and quotas
+        $classData = $classes->mapWithKeys(fn ($c) => [$c->id => $c->quota])->toArray();
+
+        $remainingStudents = $totalStudents;
+        $remainingClasses = $classData;
+
+        // Iteratively calculate ideal sizes
+        // Classes with quota < ideal get capped, then we redistribute
+        while (! empty($remainingClasses)) {
+            $idealPerClass = $remainingStudents / count($remainingClasses);
+            $cappedThisRound = [];
+
+            foreach ($remainingClasses as $classId => $quota) {
+                if ($quota < $idealPerClass) {
+                    // This class is capped at its quota
+                    $this->idealClassSizes[$classId] = (float) $quota;
+                    $remainingStudents -= $quota;
+                    $cappedThisRound[] = $classId;
+                }
+            }
+
+            // Remove capped classes from remaining
+            foreach ($cappedThisRound as $classId) {
+                unset($remainingClasses[$classId]);
+            }
+
+            // If no classes were capped this round, distribute evenly among remaining
+            if (empty($cappedThisRound)) {
+                $idealPerClass = count($remainingClasses) > 0
+                    ? $remainingStudents / count($remainingClasses)
+                    : 0;
+
+                foreach ($remainingClasses as $classId => $quota) {
+                    $this->idealClassSizes[$classId] = $idealPerClass;
+                }
+                break;
+            }
         }
     }
 
@@ -268,14 +327,22 @@ class PlacementService
         $currentCount = $distribution['count'];
         $projectedCount = $currentCount + 1;
 
-        // Prefer classes with fewer students for even distribution
-        // Lower count = lower score = better (e.g., 18 students / 2 classes = 9 each)
-        // Use currentCount directly to balance by count, not by fill percentage
-        $sizeDeviation = $currentCount;
+        // Get ideal size for this class (calculated considering quotas)
+        $idealSize = $this->idealClassSizes[$class->id] ?? ($this->totalClasses > 0 ? 1 : 0);
+
+        // Calculate how far this class is from its ideal target
+        // Classes below their ideal get lower (better) scores
+        // This ensures balanced distribution relative to each class's target
+        $sizeDeviation = $currentCount - $idealSize;
+
+        // Normalize by ideal size to make comparison fair across classes with different targets
+        // A class at 5/10 ideal should score similar to a class at 10/20 ideal
+        $normalizedDeviation = $idealSize > 0 ? $sizeDeviation / $idealSize : $sizeDeviation;
 
         if ($currentCount === 0) {
-            // First student in class - only consider size balance
-            return $sizeDeviation * 0.7;
+            // First student in class - strongly prefer empty classes
+            // Use negative deviation to prioritize filling empty classes
+            return $normalizedDeviation * 0.7;
         }
 
         // Calculate projected gender distribution
@@ -293,7 +360,7 @@ class PlacementService
         // Combined score (lower is better)
         // Weights: Class size 70% (primary), Gender 15%, Race 15%
         // Size is prioritized to ensure balanced student counts across classes
-        return ($sizeDeviation * 0.7) + ($genderDeviation * 0.15) + ($raceDeviation * 0.15);
+        return ($normalizedDeviation * 0.7) + ($genderDeviation * 0.15) + ($raceDeviation * 0.15);
     }
 
     private function updateProgress(int $sessionId, int $processed, int $total): void
