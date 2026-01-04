@@ -106,3 +106,17 @@ export interface PageProps {
     flash?: FlashMessages;
     [key: string]: any;
 }
+
+export interface Permission {
+    id: number;
+    name: string;
+    guard_name?: string;
+}
+
+export interface Role {
+    id: number;
+    name: string;
+    guard_name?: string;
+    users_count?: number;
+    permissions?: Permission[];
+}

@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\RaceController;
 use App\Http\Controllers\Admin\RegistrationSessionController;
 use App\Http\Controllers\Admin\ReligionController;
+use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\TrackController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\LoginController;
@@ -123,9 +124,6 @@ Route::middleware('auth')->group(function () {
         Route::resource('tracks', TrackController::class);
         Route::resource('races', RaceController::class);
         Route::resource('religions', ReligionController::class);
-
-        Route::get('/roles', function () {
-            return Inertia::render('Admin/Roles');
-        })->name('roles');
+        Route::resource('roles', RoleController::class)->except(['show']);
     });
 });
