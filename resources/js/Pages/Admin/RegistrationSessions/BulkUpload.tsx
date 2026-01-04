@@ -86,8 +86,9 @@ export default function BulkUpload({ session, previewData = [], errors = {}, sho
             .filter(item => !item.has_errors)
             .map(item => item.data);
 
-        setData('students_data', validStudentsData);
-        post(route('admin.registration-sessions.confirm-upload', session.id));
+        router.post(route('admin.registration-sessions.confirm-upload', session.id), {
+            students_data: validStudentsData
+        });
     };
 
     const hasErrors = Object.keys(errors).length > 0;
