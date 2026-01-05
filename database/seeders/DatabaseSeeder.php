@@ -15,9 +15,6 @@ class DatabaseSeeder extends Seeder
         $this->call([
             AdminSeeder::class,
             TrackSeeder::class,
-//            RegistrationSessionsSeeder::class,
-//            RegistrationSessionTracksSeeder::class,
-            ClassesSeeder::class,
             RacesSeeder::class,
             ReligionsSeeder::class
         ]);
