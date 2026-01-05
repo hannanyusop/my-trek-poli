@@ -15,8 +15,8 @@ class TrackSeeder extends Seeder
     {
         $tracks = [
             [
-                'name' => 'SAP (System Application Development)',
-                'description' => 'Comprehensive training in SAP system development, configuration, and business process integration.',
+                'name' => 'SAD (System Application Development)',
+                'description' => 'Comprehensive training in SAD system development, configuration, and business process integration.',
                 'is_active' => true,
                 'created_at' => now(),
                 'updated_at' => now(),
