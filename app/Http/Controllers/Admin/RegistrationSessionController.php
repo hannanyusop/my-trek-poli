@@ -231,10 +231,16 @@ class RegistrationSessionController extends Controller
     public function exportPdf(string $id)
     {
         $session = RegistrationSession::findOrFail($id);
-        $students = Student::where('registration_session_id', $id)->get();
+        $students = Student::where('registration_session_id', $id)->orderBy('submitted_at', 'asc')->get();
 
-        // TODO: Install barryvdh/laravel-dompdf package to enable PDF export
-        return back()->withErrors(['pdf' => 'PDF export is not available. Please install barryvdh/laravel-dompdf package.']);
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.students', [
+            'session' => $session,
+            'students' => $students,
+        ]);
+
+        $filename = 'students_'.str_replace(['/', '\\'], '_', $session->name).'_'.now()->format('Y-m-d').'.pdf';
+
+        return $pdf->download($filename);
     }
 
     /**
@@ -511,6 +517,47 @@ class RegistrationSessionController extends Controller
         ]);
 
         return back()->with('success', 'Student added successfully.');
+    }
+
+    /**
+     * Update student details.
+     */
+    public function updateStudent(Request $request, string $sessionId, string $studentId)
+    {
+        $session = RegistrationSession::findOrFail($sessionId);
+
+        $student = Student::where('id', $studentId)
+            ->where('registration_session_id', $session->id)
+            ->firstOrFail();
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'matric_number' => [
+                'required',
+                'string',
+                'max:255',
+                'unique:students,matric_number,'.$student->id,
+            ],
+            'identification_number' => 'required|string|max:255',
+            'gender' => 'required|in:male,female',
+            'race' => 'required|string|max:255',
+            'religion' => 'required|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'phone' => 'nullable|string|max:255',
+        ]);
+
+        $student->update([
+            'name' => $request->name,
+            'matric_number' => strtoupper($request->matric_number),
+            'identification_number' => $request->identification_number,
+            'gender' => $request->gender,
+            'race' => $request->race,
+            'religion' => $request->religion,
+            'email' => $request->email,
+            'phone' => $request->phone,
+        ]);
+
+        return back()->with('success', 'Student details updated successfully.');
     }
 
     /**

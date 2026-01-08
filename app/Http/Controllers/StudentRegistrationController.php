@@ -591,4 +591,68 @@ class StudentRegistrationController extends Controller
             'placement' => $placement,
         ]);
     }
+
+    /**
+     * Display public student list with masked data (no auth required).
+     */
+    public function publicStudentList(string $token): Response
+    {
+        $registrationSession = RegistrationSession::where('link_token', $token)->firstOrFail();
+
+        // Get submitted students only
+        $students = Student::where('registration_session_id', $registrationSession->id)
+            ->where('is_submitted', true)
+            ->orderBy('submitted_at', 'asc')
+            ->get()
+            ->map(function ($student, $index) {
+                return [
+                    'queue_number' => $index + 1,
+                    'name' => $student->name,
+                    'matric_number' => $this->maskMatricNumber($student->matric_number),
+                    'identification_number' => $this->maskIdentificationNumber($student->identification_number),
+                    'gender' => $student->gender,
+                    'submitted_at' => $student->submitted_at,
+                ];
+            });
+
+        return Inertia::render('Public/StudentList', [
+            'session' => [
+                'id' => $registrationSession->id,
+                'name' => $registrationSession->name,
+                'status' => $registrationSession->status,
+            ],
+            'students' => $students,
+            'totalStudents' => $students->count(),
+        ]);
+    }
+
+    /**
+     * Mask matric number - show only last 4 characters.
+     */
+    private function maskMatricNumber(string $matricNumber): string
+    {
+        $length = strlen($matricNumber);
+        if ($length <= 4) {
+            return str_repeat('*', $length);
+        }
+
+        return str_repeat('*', $length - 4).substr($matricNumber, -4);
+    }
+
+    /**
+     * Mask identification number - show first 2 and last 2 characters.
+     */
+    private function maskIdentificationNumber(string $idNumber): string
+    {
+        $length = strlen($idNumber);
+        if ($length <= 4) {
+            return str_repeat('*', $length);
+        }
+
+        $visibleStart = substr($idNumber, 0, 2);
+        $visibleEnd = substr($idNumber, -2);
+        $maskedMiddle = str_repeat('*', $length - 4);
+
+        return $visibleStart.$maskedMiddle.$visibleEnd;
+    }
 }

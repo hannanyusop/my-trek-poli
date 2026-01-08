@@ -35,6 +35,7 @@ Route::prefix('register')->name('student.registration.')->group(function () {
     Route::get('{token}/preview', [StudentRegistrationController::class, 'showPreview'])->name('preview');
     Route::match(['GET', 'POST'], '{token}/submit', [StudentRegistrationController::class, 'submitRegistration'])->name('submit');
     Route::get('{token}/summary/{matric_number}', [StudentRegistrationController::class, 'showSummary'])->name('summary');
+    Route::get('{token}/students', [StudentRegistrationController::class, 'publicStudentList'])->name('public-list');
 });
 
 // Authentication Routes
@@ -93,6 +94,7 @@ Route::middleware('auth')->group(function () {
         Route::post('registration-sessions/{registration_session}/undo-submission', [RegistrationSessionController::class, 'undoSubmission'])->name('registration-sessions.undo-submission');
         Route::post('registration-sessions/{registration_session}/add-student', [RegistrationSessionController::class, 'addStudent'])->name('registration-sessions.add-student');
         Route::delete('registration-sessions/{registration_session}/delete-student', [RegistrationSessionController::class, 'deleteStudent'])->name('registration-sessions.delete-student');
+        Route::put('registration-sessions/{registration_session}/students/{student}', [RegistrationSessionController::class, 'updateStudent'])->name('registration-sessions.update-student');
         Route::get('registration-sessions/{registration_session}/export/excel', [RegistrationSessionController::class, 'exportExcel'])->name('registration-sessions.export.excel');
         Route::get('registration-sessions/{registration_session}/export/pdf', [RegistrationSessionController::class, 'exportPdf'])->name('registration-sessions.export.pdf');
         Route::get('registration-sessions/{registration_session}/bulk-upload', [RegistrationSessionController::class, 'bulkUpload'])->name('registration-sessions.bulk-upload');

@@ -8,6 +8,7 @@ import { getStatusColor } from '@/lib/utils';
 import AddSingleStudentModal from '@/Components/AddSingleStudentModal';
 import EditClassModal from '@/Components/EditClassModal';
 import AddClassModal from '@/Components/AddClassModal';
+import EditStudentModal from '@/Components/EditStudentModal';
 import Swal from 'sweetalert2';
 
 interface Props {
@@ -24,7 +25,9 @@ export default function Show({ session, classes, students, availableTracks, regi
     const [isCopied, setIsCopied] = useState(false);
     const [isEditClassModalOpen, setIsEditClassModalOpen] = useState(false);
     const [isAddClassModalOpen, setIsAddClassModalOpen] = useState(false);
+    const [isEditStudentModalOpen, setIsEditStudentModalOpen] = useState(false);
     const [selectedClass, setSelectedClass] = useState<Class | null>(null);
+    const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Check if class management is allowed (before placement)
@@ -38,6 +41,11 @@ export default function Show({ session, classes, students, availableTracks, regi
     const handleEditClass = (classItem: Class) => {
         setSelectedClass(classItem);
         setIsEditClassModalOpen(true);
+    };
+
+    const handleEditStudent = (student: Student) => {
+        setSelectedStudent(student);
+        setIsEditStudentModalOpen(true);
     };
 
     const handleDeleteClass = (classItem: Class) => {
@@ -567,14 +575,23 @@ export default function Show({ session, classes, students, availableTracks, regi
                                 </div>
 
                                 <div className="flex items-center gap-3">
-                                    <Link
+                                    <a
+                                        href={route('student.registration.public-list', session.link_token)}
+                                        target="_blank"
+                                        className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                                    >
+                                        <Users className="mr-2 h-4 w-4" />
+                                        Public List
+                                    </a>
+
+                                    <a
                                         href={route('admin.registration-sessions.projector', session.id)}
                                         target="_blank"
                                         className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                                     >
                                         <Monitor className="mr-2 h-4 w-4" />
                                         Projector View
-                                    </Link>
+                                    </a>
 
                                     {session.status === 'closed' && (
                                         <button
@@ -965,22 +982,22 @@ export default function Show({ session, classes, students, availableTracks, regi
 
                                                                 {students.length > 0 && (
                                                                     <>
-                                                                        <Link
+                                                                        <a
                                                                             href={route('admin.registration-sessions.export.excel', session.id)}
                                                                             className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                                                                             onClick={() => setIsActionsDropdownOpen(false)}
                                                                         >
                                                                             <FileSpreadsheet className="mr-3 h-4 w-4 text-green-500" />
                                                                             Export Excel
-                                                                        </Link>
-                                                                        <Link
+                                                                        </a>
+                                                                        <a
                                                                             href={route('admin.registration-sessions.export.pdf', session.id)}
                                                                             className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                                                                             onClick={() => setIsActionsDropdownOpen(false)}
                                                                         >
                                                                             <FileText className="mr-3 h-4 w-4 text-red-500" />
                                                                             Export PDF
-                                                                        </Link>
+                                                                        </a>
                                                                     </>
                                                                 )}
 
@@ -1076,6 +1093,14 @@ export default function Show({ session, classes, students, availableTracks, regi
                                                                 </td>
                                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                                     <div className="flex items-center gap-2">
+                                                                        <button
+                                                                            onClick={() => handleEditStudent(student)}
+                                                                            className="flex items-center px-3 py-1 text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+                                                                            title="Edit student"
+                                                                        >
+                                                                            <Edit className="mr-1 h-3 w-3" />
+                                                                            Edit
+                                                                        </button>
                                                                         {student.is_submitted ? (
                                                                             <button
                                                                                 onClick={() => handleUndoSubmission(student.id, student.name)}
@@ -1137,6 +1162,16 @@ export default function Show({ session, classes, students, availableTracks, regi
                 onClose={() => setIsAddClassModalOpen(false)}
                 sessionId={session.id}
                 availableTracks={availableTracks}
+            />
+
+            <EditStudentModal
+                isOpen={isEditStudentModalOpen}
+                onClose={() => {
+                    setIsEditStudentModalOpen(false);
+                    setSelectedStudent(null);
+                }}
+                sessionId={session.id}
+                student={selectedStudent}
             />
         </AppLayout>
     );
