@@ -18,6 +18,7 @@ class RegistrationSession extends Model
         'start_date',
         'end_date',
         'description',
+        'enable_public_registration',
     ];
 
     protected function casts(): array
@@ -26,6 +27,7 @@ class RegistrationSession extends Model
             'status' => RegistrationSessionStatus::class,
             'start_date' => 'datetime',
             'end_date' => 'datetime',
+            'enable_public_registration' => 'boolean',
         ];
     }
 

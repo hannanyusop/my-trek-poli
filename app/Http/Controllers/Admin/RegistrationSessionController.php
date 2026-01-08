@@ -855,6 +855,22 @@ class RegistrationSessionController extends Controller
     }
 
     /**
+     * Toggle public registration setting for a session.
+     */
+    public function togglePublicRegistration(string $id)
+    {
+        $session = RegistrationSession::findOrFail($id);
+
+        $session->update([
+            'enable_public_registration' => ! $session->enable_public_registration,
+        ]);
+
+        $status = $session->enable_public_registration ? 'enabled' : 'disabled';
+
+        return back()->with('success', "Public registration has been {$status}.");
+    }
+
+    /**
      * Update a class (name and/or quota).
      */
     public function updateClass(Request $request, string $sessionId, string $classId)

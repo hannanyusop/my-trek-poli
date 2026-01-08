@@ -6,6 +6,7 @@ export interface RegistrationSession {
     end_date: string;
     description: string;
     link_token: string;
+    enable_public_registration?: boolean;
 }
 
 export interface Student {

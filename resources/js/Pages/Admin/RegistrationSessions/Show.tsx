@@ -689,6 +689,65 @@ export default function Show({ session, classes, students, availableTracks, regi
                                                     {session.description}
                                                 </p>
                                             </div>
+
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                    Public Registration
+                                                </label>
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                                                        Allow students not in the system to register
+                                                    </span>
+                                                    <button
+                                                        onClick={() => {
+                                                            Swal.fire({
+                                                                title: session.enable_public_registration ? 'Disable Public Registration?' : 'Enable Public Registration?',
+                                                                text: session.enable_public_registration
+                                                                    ? 'Students not in the system will no longer be able to register themselves.'
+                                                                    : 'Students not in the system will be able to register themselves by entering their matric number and identification number.',
+                                                                icon: 'question',
+                                                                showCancelButton: true,
+                                                                confirmButtonColor: session.enable_public_registration ? '#dc2626' : '#10b981',
+                                                                cancelButtonColor: '#6b7280',
+                                                                confirmButtonText: session.enable_public_registration ? 'Yes, disable' : 'Yes, enable',
+                                                                cancelButtonText: 'Cancel'
+                                                            }).then((result) => {
+                                                                if (result.isConfirmed) {
+                                                                    router.post(route('admin.registration-sessions.toggle-public-registration', session.id), {}, {
+                                                                        onSuccess: () => {
+                                                                            Swal.fire({
+                                                                                title: 'Updated!',
+                                                                                text: `Public registration has been ${session.enable_public_registration ? 'disabled' : 'enabled'}.`,
+                                                                                icon: 'success',
+                                                                                timer: 2000,
+                                                                                showConfirmButton: false
+                                                                            });
+                                                                        },
+                                                                        onError: () => {
+                                                                            Swal.fire({
+                                                                                title: 'Error!',
+                                                                                text: 'Failed to update setting. Please try again.',
+                                                                                icon: 'error'
+                                                                            });
+                                                                        }
+                                                                    });
+                                                                }
+                                                            });
+                                                        }}
+                                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
+                                                            session.enable_public_registration
+                                                                ? 'bg-green-600'
+                                                                : 'bg-gray-300 dark:bg-gray-600'
+                                                        }`}
+                                                    >
+                                                        <span
+                                                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                                                session.enable_public_registration ? 'translate-x-6' : 'translate-x-1'
+                                                            }`}
+                                                        />
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 

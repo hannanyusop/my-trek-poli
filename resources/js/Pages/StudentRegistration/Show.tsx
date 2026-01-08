@@ -1,5 +1,6 @@
-import { FormEventHandler, useEffect } from 'react';
+import { FormEventHandler, useEffect, useState } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
+import Swal from 'sweetalert2';
 
 declare global {
     function route(name?: string, params?: any, absolute?: boolean): string;
@@ -12,6 +13,7 @@ interface RegistrationSession {
     link_token: string;
     start_date: string;
     end_date: string;
+    enable_public_registration?: boolean;
 }
 
 interface Props {
@@ -20,12 +22,12 @@ interface Props {
 }
 
 export default function Show({ registrationSession, error }: Props) {
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors, setError, clearErrors } = useForm({
         matric_number: '',
     });
+    const [isRegistering, setIsRegistering] = useState(false);
 
     const storageKey = `student_data_${registrationSession.link_token}`;
-
 
     // Check localStorage on page load and redirect if student has submitted
     useEffect(() => {
@@ -55,11 +57,84 @@ export default function Show({ registrationSession, error }: Props) {
         }
     }, [registrationSession.link_token, storageKey]);
 
+    // Show public registration SweetAlert
+    const showPublicRegistrationPrompt = () => {
+        Swal.fire({
+            title: 'Student Not Found',
+            html: `
+                <div class="text-left">
+                    <p class="text-sm text-gray-600 mb-4">
+                        Are you sure you want to register as a new student?
+                        <br><br>
+                        <strong>Please make sure your matric number is entered correctly:</strong>
+                        <br>
+                        <span class="font-mono bg-gray-100 px-2 py-1 rounded">${data.matric_number}</span>
+                    </p>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Identification Number (IC / Passport)
+                    </label>
+                    <input
+                        type="text"
+                        id="identification_number"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        placeholder="Enter your IC or passport number"
+                    />
+                </div>
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#4f46e5',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Register as New Student',
+            cancelButtonText: 'Cancel',
+            preConfirm: () => {
+                const identificationNumber = (document.getElementById('identification_number') as HTMLInputElement)?.value?.trim();
+
+                if (!identificationNumber) {
+                    Swal.showValidationMessage('Please enter your identification number');
+                    return false;
+                }
+
+                return identificationNumber;
+            }
+        }).then((result) => {
+            if (result.isConfirmed && result.value) {
+                setIsRegistering(true);
+
+                // POST to the new register endpoint using Inertia router (handles CSRF automatically)
+                router.post(route('student.registration.register.new', registrationSession.link_token), {
+                    matric_number: data.matric_number,
+                    identification_number: result.value,
+                }, {
+                    onFinish: () => {
+                        setIsRegistering(false);
+                    },
+                    onError: (errors) => {
+                        const errorMessage = Object.values(errors).flat().join(' ') || 'Registration failed. Please try again.';
+                        Swal.fire({
+                            title: 'Error',
+                            text: errorMessage,
+                            icon: 'error'
+                        });
+                    }
+                });
+            }
+        });
+    };
+
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
         if (data.matric_number.trim()) {
+            clearErrors();
             // Use the backend lookup endpoint instead of direct form access
-            post(route('student.registration.lookup', registrationSession.link_token));
+            post(route('student.registration.lookup', registrationSession.link_token), {
+                onError: (errors) => {
+                    // Check if student not found and public registration is enabled
+                    if (errors.matric_number && errors.matric_number.includes('not found') && registrationSession.enable_public_registration) {
+                        showPublicRegistrationPrompt();
+                    }
+                }
+            });
         }
     };
 
@@ -120,20 +195,20 @@ export default function Show({ registrationSession, error }: Props) {
 
                         <button
                             type="submit"
-                            disabled={processing}
+                            disabled={processing || isRegistering}
                             className={`w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg text-sm font-semibold text-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
-                                processing
+                                processing || isRegistering
                                     ? 'bg-indigo-400 dark:bg-indigo-500 cursor-not-allowed'
                                     : 'bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-700 transform hover:scale-105 active:scale-95'
                             }`}
                         >
-                            {processing && (
+                            {(processing || isRegistering) && (
                                 <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
                             )}
-                            {processing ? 'Looking up...' : 'Continue'}
+                            {processing ? 'Looking up...' : isRegistering ? 'Registering...' : 'Continue'}
                         </button>
                     </form>
 

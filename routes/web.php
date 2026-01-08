@@ -27,6 +27,7 @@ Route::prefix('register')->name('student.registration.')->group(function () {
     Route::get('{token}/lookup', function ($token) {
         return redirect()->route('student.registration.show', $token);
     });
+    Route::post('{token}/register-new', [StudentRegistrationController::class, 'registerNewStudent'])->name('register.new');
     Route::get('{token}/form', [StudentRegistrationController::class, 'showForm'])->name('form');
     Route::post('{token}/student', [StudentRegistrationController::class, 'storeStudent'])->name('store.student');
     Route::get('{token}/tracks', [StudentRegistrationController::class, 'showTrackSelection'])->name('tracks');
@@ -102,6 +103,7 @@ Route::middleware('auth')->group(function () {
         Route::post('registration-sessions/{registration_session}/generate-test-student', [RegistrationSessionController::class, 'generateTestStudent'])->name('registration-sessions.generate-test-student');
         Route::post('registration-sessions/{registration_session}/open', [RegistrationSessionController::class, 'openSession'])->name('registration-sessions.open');
         Route::post('registration-sessions/{registration_session}/close', [RegistrationSessionController::class, 'closeSession'])->name('registration-sessions.close');
+        Route::post('registration-sessions/{registration_session}/toggle-public-registration', [RegistrationSessionController::class, 'togglePublicRegistration'])->name('registration-sessions.toggle-public-registration');
 
         // Class management routes
         Route::put('registration-sessions/{registration_session}/classes/{class}', [RegistrationSessionController::class, 'updateClass'])->name('registration-sessions.update-class');
