@@ -184,6 +184,11 @@
       <excludeFolder url="file://$MODULE_DIR$/vendor/webmozart/assert" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/laravel/horizon" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/barryvdh/laravel-dompdf" />
+      <excludeFolder url="file://$MODULE_DIR$/bootstrap/cache" />
+      <excludeFolder url="file://$MODULE_DIR$/storage/app" />
+      <excludeFolder url="file://$MODULE_DIR$/storage/debugbar" />
+      <excludeFolder url="file://$MODULE_DIR$/storage/framework" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/_laravel_idea" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

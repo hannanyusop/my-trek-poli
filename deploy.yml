@@ -1,40 +1,75 @@
-import:
-  - recipe/laravel.php
-  - contrib/php-fpm.php
-  - contrib/npm.php
+x-app-environment: &app-environment
+  APP_NAME: ${APP_NAME:-MyTrek}
+  APP_ENV: ${APP_ENV:-production}
+  APP_KEY: ${APP_KEY:-}
+  APP_DEBUG: ${APP_DEBUG:-false}
+  APP_URL: ${APP_URL:-}
+  LOG_CHANNEL: ${LOG_CHANNEL:-stderr}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  DB_CONNECTION: ${DB_CONNECTION:-mysql}
+  DB_HOST: ${DB_HOST:-}
+  DB_PORT: ${DB_PORT:-3306}
+  DB_DATABASE: ${DB_DATABASE:-}
+  DB_USERNAME: ${DB_USERNAME:-}
+  DB_PASSWORD: ${DB_PASSWORD:-}
+  QUEUE_CONNECTION: ${QUEUE_CONNECTION:-database}
+  CACHE_STORE: ${CACHE_STORE:-database}
+  SESSION_DRIVER: ${SESSION_DRIVER:-database}
+  MAIL_MAILER: ${MAIL_MAILER:-log}
+  MAIL_HOST: ${MAIL_HOST:-}
+  MAIL_PORT: ${MAIL_PORT:-}
+  MAIL_USERNAME: ${MAIL_USERNAME:-}
+  MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+  MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-hello@example.com}
+  MAIL_FROM_NAME: ${MAIL_FROM_NAME:-${APP_NAME:-MyTrek}}
+  RUN_MIGRATIONS: ${RUN_MIGRATIONS:-false}
 
-config:
-  application: 'Keje Staging'
-  repository: 'git@github.com:DevstackTeam/keje-hrm.git'
-  php_fpm_version: '8.1'
-  ssh_multiplexing: false
-  http_user: 'caddy'
-hosts:
-  staging:
-    keep_releases: 2
-    repository: 'git@github.com:hannanyusop/my-trek-poli.git'
-    remote_user: 'deployer'
-    hostname: '34.143.231.253'
-    port: '22'
-    deploy_path: '/var/www/myTrek'
-    branch: 'feature/main'
-tasks:
-  deploy:
-    - deploy:prepare
-    - deploy:vendors
-    - npm:install
-    - npm:build
-    - artisan:storage:link
-    - artisan:config:cache
-    - artisan:route:cache
-    - artisan:view:cache
-    - deploy:publish
-  npm:install:
-    - run: source ~/.nvm/nvm.sh && cd {{release_path}} && npm install
-  npm:build:
-    - run: source ~/.nvm/nvm.sh && cd {{release_path}} && npm run build
-  migrate:
-    - artisan:migrate
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      <<: *app-environment
+    volumes:
+      - app-storage:/var/www/html/storage
+    expose:
+      - "80"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost/up || curl -fsS http://localhost/ >/dev/null"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
-after:
-  deploy:failed: deploy:unlock
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: php artisan queue:work --sleep=3 --tries=3 --timeout=120
+    environment:
+      <<: *app-environment
+      RUN_MIGRATIONS: "false"
+    volumes:
+      - app-storage:/var/www/html/storage
+    depends_on:
+      - app
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: php artisan schedule:work
+    environment:
+      <<: *app-environment
+      RUN_MIGRATIONS: "false"
+    volumes:
+      - app-storage:/var/www/html/storage
+    depends_on:
+      - app
+
+volumes:
+  app-storage:
