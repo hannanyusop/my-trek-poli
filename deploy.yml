@@ -3,10 +3,12 @@ x-app-environment: &app-environment
   APP_ENV: ${APP_ENV:-production}
   APP_KEY: ${APP_KEY:-}
   APP_DEBUG: ${APP_DEBUG:-false}
-  APP_URL: ${APP_URL:-}
-  LOG_CHANNEL: ${LOG_CHANNEL:-stderr}
+  APP_URL: ${APP_URL:-https://mytrek.hanan.my}
+  LOG_CHANNEL: stderr
+  LOG_STACK: stderr
   LOG_LEVEL: ${LOG_LEVEL:-info}
   DB_CONNECTION: ${DB_CONNECTION:-mysql}
+  DB_URL: ${DB_URL:-}
   DB_HOST: ${DB_HOST:-}
   DB_PORT: ${DB_PORT:-3306}
   DB_DATABASE: ${DB_DATABASE:-}
@@ -24,6 +26,13 @@ x-app-environment: &app-environment
   MAIL_FROM_NAME: ${MAIL_FROM_NAME:-${APP_NAME:-MyTrek}}
   RUN_MIGRATIONS: ${RUN_MIGRATIONS:-false}
 
+x-storage-volumes: &storage-volumes
+  - app-storage:/var/www/html/storage/app
+  - app-cache:/var/www/html/storage/framework/cache
+  - app-sessions:/var/www/html/storage/framework/sessions
+  - app-views:/var/www/html/storage/framework/views
+  - app-logs:/var/www/html/storage/logs
+
 services:
   app:
     build:
@@ -33,7 +42,7 @@ services:
     environment:
       <<: *app-environment
     volumes:
-      - app-storage:/var/www/html/storage
+      *storage-volumes
     expose:
       - "80"
     healthcheck:
@@ -53,7 +62,7 @@ services:
       <<: *app-environment
       RUN_MIGRATIONS: "false"
     volumes:
-      - app-storage:/var/www/html/storage
+      *storage-volumes
     depends_on:
       - app
 
@@ -67,9 +76,13 @@ services:
       <<: *app-environment
       RUN_MIGRATIONS: "false"
     volumes:
-      - app-storage:/var/www/html/storage
+      *storage-volumes
     depends_on:
       - app
 
 volumes:
   app-storage:
+  app-cache:
+  app-sessions:
+  app-views:
+  app-logs:

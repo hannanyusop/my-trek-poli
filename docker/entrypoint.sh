@@ -3,6 +3,7 @@ set -e
 
 mkdir -p \
   storage/app/public \
+  storage/app/private \
   storage/framework/cache/data \
   storage/framework/sessions \
   storage/framework/testing \
@@ -10,8 +11,9 @@ mkdir -p \
   storage/logs \
   bootstrap/cache
 
+touch storage/logs/laravel.log
 chown -R www-data:www-data storage bootstrap/cache
-chmod -R ug+rwX storage bootstrap/cache
+chmod -R u+rwX,g+rwX storage bootstrap/cache
 
 if [ ! -e public/storage ]; then
   php artisan storage:link --force >/dev/null 2>&1 || true
