@@ -106,6 +106,7 @@ Route::middleware('auth')->group(function () {
         Route::post('registration-sessions/{registration_session}/open', [RegistrationSessionController::class, 'openSession'])->name('registration-sessions.open');
         Route::post('registration-sessions/{registration_session}/close', [RegistrationSessionController::class, 'closeSession'])->name('registration-sessions.close');
         Route::post('registration-sessions/{registration_session}/toggle-public-registration', [RegistrationSessionController::class, 'togglePublicRegistration'])->name('registration-sessions.toggle-public-registration');
+        Route::put('registration-sessions/{registration_session}/placement-algorithm', [RegistrationSessionController::class, 'updatePlacementAlgorithm'])->name('registration-sessions.update-placement-algorithm');
 
         // Class management routes
         Route::put('registration-sessions/{registration_session}/classes/{class}', [RegistrationSessionController::class, 'updateClass'])->name('registration-sessions.update-class');

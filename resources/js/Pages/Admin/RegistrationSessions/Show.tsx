@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import { Calendar, Users, BookOpen, Clock, ArrowLeft, QrCode, User, Target, Monitor, RotateCcw, FileSpreadsheet, FileText, Upload, UserPlus, Trash2, ChevronDown, MoreVertical, Copy, Check, Sparkles, XCircle, PlayCircle, Settings, Eye, RefreshCw, Edit, Plus } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { RegistrationSession, Student, Class, RegistrationSessionTrack, PageProps } from '@/types';
+import { RegistrationSession, Student, Class, RegistrationSessionTrack, PageProps, PlacementAlgorithmOption } from '@/types';
 import { getStatusColor } from '@/lib/utils';
 import AddSingleStudentModal from '@/Components/AddSingleStudentModal';
 import EditClassModal from '@/Components/EditClassModal';
@@ -17,9 +17,10 @@ interface Props {
     students: Student[];
     availableTracks: RegistrationSessionTrack[];
     registrationLink: string;
+    placementAlgorithms: PlacementAlgorithmOption[];
 }
 
-export default function Show({ session, classes, students, availableTracks, registrationLink }: Props) {
+export default function Show({ session, classes, students, availableTracks, registrationLink, placementAlgorithms }: Props) {
     const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
     const [isActionsDropdownOpen, setIsActionsDropdownOpen] = useState(false);
     const [isCopied, setIsCopied] = useState(false);
@@ -32,6 +33,10 @@ export default function Show({ session, classes, students, availableTracks, regi
 
     // Check if class management is allowed (before placement)
     const canManageClasses = ['draft', 'open', 'closed'].includes(session.status);
+    const canChangePlacementAlgorithm = ['draft', 'open', 'closed'].includes(session.status);
+    const selectedPlacementAlgorithm = placementAlgorithms.find(
+        (algorithm) => algorithm.key === (session.placement_algorithm || 'global_balance')
+    );
 
     // Count classes per track for delete validation
     const getClassCountForTrack = (trackId: number) => {
@@ -188,6 +193,46 @@ export default function Show({ session, classes, students, availableTracks, regi
                         Swal.fire({
                             title: 'Error!',
                             text: 'Failed to delete student. Please try again.',
+                            icon: 'error'
+                        });
+                    }
+                });
+            }
+        });
+    };
+
+    const handlePlacementAlgorithmChange = (algorithmKey: string) => {
+        const algorithm = placementAlgorithms.find((item) => item.key === algorithmKey);
+
+        Swal.fire({
+            title: 'Update Placement Algorithm?',
+            text: `Use ${algorithm?.label || algorithmKey} when automatic placement runs for this session.`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#4f46e5',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Update',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                router.put(route('admin.registration-sessions.update-placement-algorithm', session.id), {
+                    placement_algorithm: algorithmKey,
+                }, {
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        Swal.fire({
+                            title: 'Updated!',
+                            text: 'Placement algorithm has been updated.',
+                            icon: 'success',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                    },
+                    onError: (errors) => {
+                        const errorMessage = Object.values(errors).flat().join(' ');
+                        Swal.fire({
+                            title: 'Error!',
+                            text: errorMessage || 'Failed to update placement algorithm. Please try again.',
                             icon: 'error'
                         });
                     }
@@ -763,6 +808,36 @@ export default function Show({ session, classes, students, availableTracks, regi
                                                             }`}
                                                         />
                                                     </button>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                    Placement Algorithm
+                                                </label>
+                                                <div className="space-y-2">
+                                                    <select
+                                                        value={session.placement_algorithm || 'global_balance'}
+                                                        disabled={!canChangePlacementAlgorithm}
+                                                        onChange={(event) => handlePlacementAlgorithmChange(event.target.value)}
+                                                        className="block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500 dark:disabled:bg-gray-800 dark:disabled:text-gray-400"
+                                                    >
+                                                        {placementAlgorithms.map((algorithm) => (
+                                                            <option key={algorithm.key} value={algorithm.key}>
+                                                                {algorithm.label}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                    {selectedPlacementAlgorithm && (
+                                                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                            {selectedPlacementAlgorithm.description}
+                                                        </p>
+                                                    )}
+                                                    {!canChangePlacementAlgorithm && (
+                                                        <p className="text-xs text-amber-600 dark:text-amber-400">
+                                                            Algorithm is locked after placement starts.
+                                                        </p>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>

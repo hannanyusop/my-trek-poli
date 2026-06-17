@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\PlacementAlgorithm;
 use App\Enums\RegistrationSessionStatus;
 use App\Models\RegistrationSession;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -27,6 +28,7 @@ class RegistrationSessionFactory extends Factory
             'end_date' => now()->addDays(7),
             'status' => RegistrationSessionStatus::Draft,
             'link_token' => fake()->regexify('[a-z0-9]{4}'),
+            'placement_algorithm' => PlacementAlgorithm::GlobalBalance->value,
         ];
     }
 

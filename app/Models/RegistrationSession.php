@@ -19,6 +19,7 @@ class RegistrationSession extends Model
         'end_date',
         'description',
         'enable_public_registration',
+        'placement_algorithm',
     ];
 
     protected function casts(): array

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\PlacementAlgorithm;
 use App\Models\Classes;
 use App\Models\Placement;
 use App\Models\PlacementLog;
@@ -33,12 +34,28 @@ class PlacementService
 
     private int $totalFlagged = 0;
 
+    private string $currentAlgorithm = '';
+
     public function processSession(int $sessionId): array
     {
+        $this->resetRunState();
+
         DB::beginTransaction();
 
         try {
             $session = RegistrationSession::findOrFail($sessionId);
+            $algorithm = PlacementAlgorithm::tryFrom($session->placement_algorithm ?? PlacementAlgorithm::GlobalBalance->value);
+
+            if (! $algorithm) {
+                DB::rollBack();
+
+                return [
+                    'success' => false,
+                    'message' => "Unsupported placement algorithm: {$session->placement_algorithm}",
+                ];
+            }
+
+            $this->currentAlgorithm = $algorithm->value;
 
             // Get all submitted students ordered by submission time (FCFS)
             $students = Student::where('registration_session_id', $sessionId)
@@ -188,8 +205,11 @@ class PlacementService
             'class_id' => $class->id,
             'track_priority' => $priority,
             'action' => 'auto_assigned',
-            'balance_metrics' => $this->classDistributions[$class->id],
-            'notes' => "Auto-assigned to {$class->name} using priority {$priority}",
+            'balance_metrics' => [
+                ...$this->classDistributions[$class->id],
+                'algorithm' => $this->currentAlgorithm,
+            ],
+            'notes' => "Auto-assigned to {$class->name} using {$this->currentAlgorithm} algorithm with priority {$priority}",
         ]);
     }
 
@@ -217,7 +237,7 @@ class PlacementService
             'registration_session_id' => $sessionId,
             'student_id' => $student->id,
             'action' => 'flagged',
-            'notes' => $reason,
+            'notes' => "{$reason} using {$this->currentAlgorithm} algorithm",
         ]);
 
         $this->totalFlagged++;
@@ -417,5 +437,17 @@ class PlacementService
             'action' => 'cleared',
             'notes' => 'All placements cleared for regeneration',
         ]);
+    }
+
+    private function resetRunState(): void
+    {
+        $this->targetProportions = [];
+        $this->classDistributions = [];
+        $this->idealClassSizes = [];
+        $this->totalClasses = 0;
+        $this->totalProcessed = 0;
+        $this->totalPlaced = 0;
+        $this->totalFlagged = 0;
+        $this->currentAlgorithm = '';
     }
 }

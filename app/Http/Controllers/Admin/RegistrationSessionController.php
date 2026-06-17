@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\PlacementAlgorithm;
 use App\Exports\StudentsExport;
 use App\Http\Controllers\Controller;
 use App\Jobs\ProcessPlacementJob;
@@ -11,6 +12,7 @@ use App\Models\Student;
 use App\Models\Track;
 use App\Services\PlacementService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -31,6 +33,7 @@ class RegistrationSessionController extends Controller
     {
         return Inertia::render('Admin/RegistrationSessions/Create', [
             'tracks' => Track::where('is_active', true)->get(),
+            'placementAlgorithms' => PlacementAlgorithm::options(),
         ]);
     }
 
@@ -52,6 +55,7 @@ class RegistrationSessionController extends Controller
             'classes' => 'nullable|array',
             'classes.*.*.name' => 'required|string|max:255',
             'classes.*.*.quota' => 'required|integer|min:1',
+            'placement_algorithm' => ['nullable', Rule::in(PlacementAlgorithm::keys())],
         ]);
 
         try {
@@ -65,6 +69,7 @@ class RegistrationSessionController extends Controller
                 'end_date' => $request->end_date,
                 'status' => \App\Enums\RegistrationSessionStatus::Draft,
                 'link_token' => $this->generateUniqueSlug(),
+                'placement_algorithm' => $request->input('placement_algorithm', PlacementAlgorithm::GlobalBalance->value),
             ]);
 
             // Create registration session tracks and their classes
@@ -140,6 +145,7 @@ class RegistrationSessionController extends Controller
             'students' => $students,
             'availableTracks' => $availableTracks,
             'registrationLink' => $registrationLink,
+            'placementAlgorithms' => PlacementAlgorithm::options(),
         ]);
     }
 
@@ -915,6 +921,32 @@ class RegistrationSessionController extends Controller
         $status = $session->enable_public_registration ? 'enabled' : 'disabled';
 
         return back()->with('success', "Public registration has been {$status}.");
+    }
+
+    /**
+     * Update the placement algorithm used by this session.
+     */
+    public function updatePlacementAlgorithm(Request $request, string $id)
+    {
+        $session = RegistrationSession::findOrFail($id);
+
+        if (! in_array($session->status, [
+            \App\Enums\RegistrationSessionStatus::Draft,
+            \App\Enums\RegistrationSessionStatus::Open,
+            \App\Enums\RegistrationSessionStatus::Closed,
+        ])) {
+            return back()->withErrors(['status' => 'Placement algorithm can only be changed before placement starts.']);
+        }
+
+        $validated = $request->validate([
+            'placement_algorithm' => ['required', Rule::in(PlacementAlgorithm::keys())],
+        ]);
+
+        $session->update([
+            'placement_algorithm' => $validated['placement_algorithm'],
+        ]);
+
+        return back()->with('success', 'Placement algorithm has been updated.');
     }
 
     /**

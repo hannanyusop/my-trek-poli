@@ -7,6 +7,13 @@ export interface RegistrationSession {
     description: string;
     link_token: string;
     enable_public_registration?: boolean;
+    placement_algorithm?: string;
+}
+
+export interface PlacementAlgorithmOption {
+    key: string;
+    label: string;
+    description: string;
 }
 
 export interface Student {
