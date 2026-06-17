@@ -28,7 +28,8 @@ class PlacementController extends Controller
         $students = Student::where('registration_session_id', $sessionId)
             ->where('is_submitted', true)
             ->with(['activePlacement.assignedClass.registrationSessionTrack.track', 'preferences.registrationSessionTrack.track'])
-            ->orderBy('name')
+            ->orderBy('submitted_at')
+            ->orderBy('id')
             ->get()
             ->map(function ($student) {
                 $placement = $student->activePlacement;
@@ -41,6 +42,7 @@ class PlacementController extends Controller
                     'race' => $student->race,
                     'email' => $student->email,
                     'phone' => $student->phone,
+                    'submitted_at' => $student->submitted_at?->toISOString(),
                     'placement_status' => $placement?->placement_status ?? 'pending',
                     'placement_notes' => $placement?->placement_notes,
                     'track_priority' => $placement?->track_priority,
@@ -62,13 +64,6 @@ class PlacementController extends Controller
                         ->values()
                         ->all(),
                 ];
-            })
-            ->sortBy(fn ($s) => match ($s['placement_status']) {
-                'pending' => 0,
-                'flagged' => 1,
-                'placed' => 2,
-                'manually_assigned' => 3,
-                default => 4,
             })
             ->values();
 

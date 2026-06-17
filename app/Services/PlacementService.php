@@ -57,10 +57,36 @@ class PlacementService
 
             $this->currentAlgorithm = $algorithm->value;
 
+            return match ($algorithm) {
+                PlacementAlgorithm::GlobalBalance => $this->processGlobalBalanceSession($session),
+                PlacementAlgorithm::FcfsPreferenceBalance => $this->processFcfsPreferenceBalanceSession($session),
+            };
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Placement processing error', [
+                'session_id' => $sessionId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Placement failed: '.$e->getMessage(),
+            ];
+        }
+    }
+
+    private function processGlobalBalanceSession(RegistrationSession $session): array
+    {
+        $sessionId = $session->id;
+
+        try {
             // Get all submitted students ordered by submission time (FCFS)
             $students = Student::where('registration_session_id', $sessionId)
                 ->where('is_submitted', true)
                 ->orderBy('submitted_at', 'asc')
+                ->orderBy('id', 'asc')
                 ->with('preferences.registrationSessionTrack')
                 ->get();
 
@@ -119,6 +145,72 @@ class PlacementService
         }
     }
 
+    private function processFcfsPreferenceBalanceSession(RegistrationSession $session): array
+    {
+        $sessionId = $session->id;
+
+        try {
+            $students = Student::where('registration_session_id', $sessionId)
+                ->where('is_submitted', true)
+                ->orderBy('submitted_at', 'asc')
+                ->orderBy('id', 'asc')
+                ->with([
+                    'preferences' => fn ($query) => $query->orderBy('priority', 'asc'),
+                    'preferences.registrationSessionTrack',
+                ])
+                ->get();
+
+            $totalStudents = $students->count();
+
+            if ($totalStudents === 0) {
+                DB::commit();
+
+                return [
+                    'success' => true,
+                    'placed' => 0,
+                    'flagged' => 0,
+                    'total' => 0,
+                    'message' => 'No students to process.',
+                ];
+            }
+
+            $this->calculateTargetProportions($students);
+            $this->initializeClassDistributions($sessionId, $totalStudents);
+
+            foreach ($students as $student) {
+                $this->updateProgress($sessionId, ++$this->totalProcessed, $totalStudents);
+
+                $this->processStudentByPreferences($student, $sessionId);
+            }
+
+            DB::commit();
+
+            Cache::forget("placement_progress_{$sessionId}");
+
+            return [
+                'success' => true,
+                'placed' => $this->totalPlaced,
+                'flagged' => $this->totalFlagged,
+                'total' => $totalStudents,
+                'message' => "Placement complete using {$this->currentAlgorithm}. {$this->totalPlaced} placed, {$this->totalFlagged} flagged for review.",
+            ];
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Placement processing error', [
+                'session_id' => $sessionId,
+                'algorithm' => $this->currentAlgorithm,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Placement failed: '.$e->getMessage(),
+            ];
+        }
+    }
+
     private function processStudent(Student $student, int $sessionId): void
     {
         // Get ALL active classes in the session with available capacity (global balance)
@@ -127,6 +219,7 @@ class PlacementService
         })
             ->where('is_active', true)
             ->with('registrationSessionTrack')
+            ->orderBy('id', 'asc')
             ->get()
             ->filter(function ($class) {
                 $assignedCount = $this->classDistributions[$class->id]['count'] ?? 0;
@@ -141,17 +234,7 @@ class PlacementService
         }
 
         // Find the best class based on balance score (globally across all classes)
-        $bestClass = null;
-        $bestScore = PHP_FLOAT_MAX;
-
-        foreach ($classes as $class) {
-            $score = $this->getClassBalanceScore($class, $student);
-
-            if ($score < $bestScore) {
-                $bestScore = $score;
-                $bestClass = $class;
-            }
-        }
+        $bestClass = $this->selectBestBalancedClass($classes, $student);
 
         if ($bestClass) {
             // Calculate track priority for logging (if student had this track in preferences)
@@ -165,6 +248,65 @@ class PlacementService
         } else {
             $this->flagStudent($student, 'No suitable class found', $sessionId);
         }
+    }
+
+    private function processStudentByPreferences(Student $student, int $sessionId): void
+    {
+        $preferences = $student->preferences
+            ->filter(fn ($preference) => $preference->registrationSessionTrack !== null)
+            ->sortBy('priority')
+            ->values();
+
+        if ($preferences->isEmpty()) {
+            $this->flagStudent($student, 'No track preferences found', $sessionId);
+
+            return;
+        }
+
+        foreach ($preferences as $preference) {
+            $classes = Classes::where('registration_session_track_id', $preference->registration_session_track_id)
+                ->where('is_active', true)
+                ->with('registrationSessionTrack')
+                ->orderBy('id', 'asc')
+                ->get()
+                ->filter(function ($class) {
+                    $assignedCount = $this->classDistributions[$class->id]['count'] ?? 0;
+
+                    return $assignedCount < $class->quota;
+                });
+
+            if ($classes->isEmpty()) {
+                continue;
+            }
+
+            $bestClass = $this->selectBestBalancedClass($classes, $student);
+
+            if ($bestClass) {
+                $this->assignStudentToClass($student, $bestClass, $preference->priority, $sessionId);
+                $this->totalPlaced++;
+
+                return;
+            }
+        }
+
+        $this->flagStudent($student, 'All preferred tracks are full or unavailable', $sessionId);
+    }
+
+    private function selectBestBalancedClass(Collection $classes, Student $student): ?Classes
+    {
+        $bestClass = null;
+        $bestScore = PHP_FLOAT_MAX;
+
+        foreach ($classes as $class) {
+            $score = $this->getClassBalanceScore($class, $student);
+
+            if ($score < $bestScore || ($score === $bestScore && $bestClass && $class->id < $bestClass->id)) {
+                $bestScore = $score;
+                $bestClass = $class;
+            }
+        }
+
+        return $bestClass;
     }
 
     private function assignStudentToClass(Student $student, Classes $class, ?int $priority, int $sessionId): void

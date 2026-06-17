@@ -49,8 +49,7 @@ New algorithms should be added as stable lowercase keys:
 
 ```text
 global_balance
-preference_first
-fcfs_preference
+fcfs_preference_balance
 quota_fill
 manual_review
 ```
@@ -180,3 +179,9 @@ on `placement_logs`.
 7. Add frontend selection control in the registration session form.
 8. Add tests for default behavior and selected algorithm dispatch.
 
+## Implemented Algorithms
+
+| Key | Name | Documentation |
+|-----|------|---------------|
+| `global_balance` | Global Balance | Existing `PlacementService` behavior. |
+| `fcfs_preference_balance` | FCFS Preference Balance | [fcfs-preference-balance.md](fcfs-preference-balance.md) |

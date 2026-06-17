@@ -5,11 +5,13 @@ namespace App\Enums;
 enum PlacementAlgorithm: string
 {
     case GlobalBalance = 'global_balance';
+    case FcfsPreferenceBalance = 'fcfs_preference_balance';
 
     public function label(): string
     {
         return match ($this) {
             self::GlobalBalance => 'Global Balance',
+            self::FcfsPreferenceBalance => 'FCFS Preference Balance',
         };
     }
 
@@ -17,6 +19,7 @@ enum PlacementAlgorithm: string
     {
         return match ($this) {
             self::GlobalBalance => 'Distributes students across all active classes by quota, gender balance, and race balance.',
+            self::FcfsPreferenceBalance => 'Processes earlier submissions first, tries 1st then 2nd then 3rd choice, and balances gender/race within the selected track.',
         };
     }
 

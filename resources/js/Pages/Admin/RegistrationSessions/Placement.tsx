@@ -29,6 +29,7 @@ interface Student {
     race: string;
     email?: string;
     phone?: string;
+    submitted_at?: string | null;
     placement_status: string;
     placement_notes?: string;
     track_priority?: number | null;
@@ -323,6 +324,18 @@ export default function Placement({ session, students, classes, stats }: Props) 
         return badges[priority] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
     };
 
+    const formatSubmittedAt = (submittedAt?: string | null) => {
+        if (!submittedAt) return '-';
+
+        return new Intl.DateTimeFormat(undefined, {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        }).format(new Date(submittedAt));
+    };
+
     return (
         <AppLayout title="Manage Placements">
             <Head title={`Placement Management - ${session.name}`} />
@@ -500,6 +513,7 @@ export default function Placement({ session, students, classes, stats }: Props) 
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Matric</th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Gender</th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Race</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Submitted At</th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Assigned Class</th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Actions</th>
@@ -512,6 +526,7 @@ export default function Placement({ session, students, classes, stats }: Props) 
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{student.matric_number}</td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{student.gender}</td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{student.race}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{formatSubmittedAt(student.submitted_at)}</td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                                                     {student.assigned_class ? (
                                                         <div>
@@ -703,6 +718,7 @@ export default function Placement({ session, students, classes, stats }: Props) 
                                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Matric</th>
                                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Gender</th>
                                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Race</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Submitted At</th>
                                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Priority</th>
                                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
                                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Actions</th>
@@ -715,6 +731,7 @@ export default function Placement({ session, students, classes, stats }: Props) 
                                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{student.matric_number}</td>
                                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{student.gender}</td>
                                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{student.race}</td>
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{formatSubmittedAt(student.submitted_at)}</td>
                                                             <td className="px-6 py-4 whitespace-nowrap text-sm">
                                                                 {student.track_priority ? (
                                                                     <span className={`px-2 py-0.5 text-xs font-semibold rounded ${getPriorityBadge(student.track_priority)}`}>
@@ -791,6 +808,7 @@ export default function Placement({ session, students, classes, stats }: Props) 
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Matric</th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Gender</th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Race</th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Submitted At</th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Actions</th>
                                                 </tr>
@@ -802,6 +820,7 @@ export default function Placement({ session, students, classes, stats }: Props) 
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{student.matric_number}</td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{student.gender}</td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{student.race}</td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{formatSubmittedAt(student.submitted_at)}</td>
                                                         <td className="px-6 py-4 whitespace-nowrap">
                                                             <span className={`px-2 py-1 text-xs font-medium rounded-full flex items-center gap-1 w-fit ${getStatusBadge(student.placement_status)}`}>
                                                                 {getStatusIcon(student.placement_status)}
@@ -1159,6 +1178,10 @@ export default function Placement({ session, students, classes, stats }: Props) 
                                         <div>
                                             <p className="text-sm text-gray-500 dark:text-gray-400">Race</p>
                                             <p className="text-sm font-medium text-gray-900 dark:text-white">{selectedStudent.race}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-gray-500 dark:text-gray-400">Submitted At</p>
+                                            <p className="text-sm font-medium text-gray-900 dark:text-white">{formatSubmittedAt(selectedStudent.submitted_at)}</p>
                                         </div>
                                     </div>
                                 </div>
