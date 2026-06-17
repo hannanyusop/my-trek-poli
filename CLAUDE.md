@@ -8,7 +8,7 @@ The Laravel Boost guidelines are specifically curated by Laravel maintainers for
 ## Foundational Context
 This application is a Laravel application and its main Laravel ecosystems package & versions are below. You are an expert with them all. Ensure you abide by these specific packages & versions.
 
-- php - 8.3.23
+- php - 8.3.29
 - inertiajs/inertia-laravel (INERTIA) - v2
 - laravel/framework (LARAVEL) - v12
 - laravel/prompts (PROMPTS) - v0
@@ -25,16 +25,6 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - You must follow all existing code conventions used in this application. When creating or editing a file, check sibling files for the correct structure, approach, naming.
 - Use descriptive names for variables and methods. For example, `isRegisteredForDiscounts`, not `discount()`.
 - Check for existing components to reuse before writing a new one.
-
-## TypeScript Interfaces & Types
-- All TypeScript interfaces and types should be defined in `resources/js/types/index.ts` for reusability across components.
-- Import types using `import { TypeName } from '@/types'` in components that need them.
-- Avoid duplicating interface definitions in individual component files.
-
-## Utility Functions
-- Reusable utility functions should be placed in `resources/js/lib/utils.ts`.
-- Use the existing `cn()` function for conditional Tailwind classes.
-- Import utilities using `import { functionName } from '@/lib/utils'`.
 
 ## Verification Scripts
 - Do not create verification scripts or tinker when tests cover that functionality and prove it works. Unit and feature tests are more important.
@@ -351,7 +341,7 @@ import { Link } from '@inertiajs/react'
 </code-snippet>
 
 
-=== inertia-react/v2 rules ===
+=== inertia-react/v2/forms rules ===
 
 ## Inertia + React Forms
 

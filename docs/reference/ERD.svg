@@ -1,0 +1,285 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1180" viewBox="0 0 1600 1180" role="img" aria-labelledby="title desc">
+  <title id="title">MyTrek Entity Relationship Diagram</title>
+  <desc id="desc">Entity relationship diagram for MyTrek registration sessions, tracks, classes, students, preferences, placements, placement logs, users, lookup tables, roles, and permissions.</desc>
+  <defs>
+    <style>
+      .canvas { fill: #f8fafc; }
+      .entity { fill: #ffffff; stroke: #334155; stroke-width: 1.5; }
+      .entity-domain { fill: #ffffff; stroke: #0f766e; stroke-width: 2; }
+      .entity-auth { fill: #ffffff; stroke: #7c3aed; stroke-width: 1.8; }
+      .header { fill: #0f172a; }
+      .header-domain { fill: #0f766e; }
+      .header-auth { fill: #6d28d9; }
+      .title { fill: #ffffff; font: 700 15px Arial, sans-serif; letter-spacing: 0; }
+      .field { fill: #1e293b; font: 12px Arial, sans-serif; letter-spacing: 0; }
+      .muted { fill: #64748b; font: 11px Arial, sans-serif; letter-spacing: 0; }
+      .relationship { fill: none; stroke: #475569; stroke-width: 1.4; }
+      .relationship-weak { fill: none; stroke: #94a3b8; stroke-width: 1.2; stroke-dasharray: 6 5; }
+      .label { fill: #334155; font: 11px Arial, sans-serif; letter-spacing: 0; }
+      .note { fill: #475569; font: 13px Arial, sans-serif; letter-spacing: 0; }
+      .heading { fill: #0f172a; font: 700 24px Arial, sans-serif; letter-spacing: 0; }
+      .subheading { fill: #475569; font: 13px Arial, sans-serif; letter-spacing: 0; }
+      .badge { fill: #e2e8f0; stroke: #cbd5e1; }
+      .badge-text { fill: #334155; font: 700 10px Arial, sans-serif; letter-spacing: 0; }
+    </style>
+  </defs>
+
+  <rect class="canvas" x="0" y="0" width="1600" height="1180"/>
+  <text class="heading" x="40" y="48">MyTrek Entity Relationship Diagram</text>
+  <text class="subheading" x="40" y="72">Based on Laravel migrations. Solid lines show direct foreign-key relationships; dashed lines show lookup or logical permission relationships.</text>
+
+  <!-- Registration sessions -->
+  <g id="registration-sessions">
+    <rect class="entity-domain" x="60" y="120" width="270" height="246" rx="8"/>
+    <rect class="header-domain" x="60" y="120" width="270" height="36" rx="8"/>
+    <rect class="header-domain" x="60" y="146" width="270" height="10"/>
+    <text class="title" x="76" y="143">registration_sessions</text>
+    <text class="field" x="76" y="178">PK id</text>
+    <text class="field" x="76" y="198">name</text>
+    <text class="field" x="76" y="218">status</text>
+    <text class="field" x="76" y="238">UK link_token</text>
+    <text class="field" x="76" y="258">start_date, end_date</text>
+    <text class="field" x="76" y="278">description</text>
+    <text class="field" x="76" y="298">enable_public_registration</text>
+    <text class="field" x="76" y="318">created_at, updated_at</text>
+    <rect class="badge" x="76" y="333" width="132" height="20" rx="10"/>
+    <text class="badge-text" x="88" y="347">SESSION ROOT</text>
+  </g>
+
+  <!-- Tracks -->
+  <g id="tracks">
+    <rect class="entity-domain" x="430" y="120" width="240" height="166" rx="8"/>
+    <rect class="header-domain" x="430" y="120" width="240" height="36" rx="8"/>
+    <rect class="header-domain" x="430" y="146" width="240" height="10"/>
+    <text class="title" x="446" y="143">tracks</text>
+    <text class="field" x="446" y="178">PK id</text>
+    <text class="field" x="446" y="198">name</text>
+    <text class="field" x="446" y="218">description</text>
+    <text class="field" x="446" y="238">is_active</text>
+    <text class="field" x="446" y="258">created_at, updated_at</text>
+  </g>
+
+  <!-- Session tracks -->
+  <g id="registration-session-tracks">
+    <rect class="entity-domain" x="430" y="380" width="300" height="186" rx="8"/>
+    <rect class="header-domain" x="430" y="380" width="300" height="36" rx="8"/>
+    <rect class="header-domain" x="430" y="406" width="300" height="10"/>
+    <text class="title" x="446" y="403">registration_session_tracks</text>
+    <text class="field" x="446" y="438">PK id</text>
+    <text class="field" x="446" y="458">FK registration_session_id</text>
+    <text class="field" x="446" y="478">FK track_id</text>
+    <text class="field" x="446" y="498">name</text>
+    <text class="field" x="446" y="518">description</text>
+    <text class="field" x="446" y="538">created_at, updated_at</text>
+  </g>
+
+  <!-- Classes -->
+  <g id="classes">
+    <rect class="entity-domain" x="820" y="380" width="270" height="206" rx="8"/>
+    <rect class="header-domain" x="820" y="380" width="270" height="36" rx="8"/>
+    <rect class="header-domain" x="820" y="406" width="270" height="10"/>
+    <text class="title" x="836" y="403">classes</text>
+    <text class="field" x="836" y="438">PK id</text>
+    <text class="field" x="836" y="458">FK registration_session_track_id</text>
+    <text class="field" x="836" y="478">name</text>
+    <text class="field" x="836" y="498">quota</text>
+    <text class="field" x="836" y="518">current_count</text>
+    <text class="field" x="836" y="538">is_active</text>
+    <text class="field" x="836" y="558">created_at, updated_at</text>
+  </g>
+
+  <!-- Students -->
+  <g id="students">
+    <rect class="entity-domain" x="60" y="460" width="290" height="286" rx="8"/>
+    <rect class="header-domain" x="60" y="460" width="290" height="36" rx="8"/>
+    <rect class="header-domain" x="60" y="486" width="290" height="10"/>
+    <text class="title" x="76" y="483">students</text>
+    <text class="field" x="76" y="518">PK id</text>
+    <text class="field" x="76" y="538">FK registration_session_id</text>
+    <text class="field" x="76" y="558">matric_number</text>
+    <text class="field" x="76" y="578">identification_number</text>
+    <text class="field" x="76" y="598">name</text>
+    <text class="field" x="76" y="618">gender</text>
+    <text class="field" x="76" y="638">race, religion</text>
+    <text class="field" x="76" y="658">email, phone</text>
+    <text class="field" x="76" y="678">submitted_at</text>
+    <text class="field" x="76" y="698">is_submitted</text>
+    <text class="field" x="76" y="718">created_at, updated_at</text>
+  </g>
+
+  <!-- Student preferences -->
+  <g id="student-preferences">
+    <rect class="entity-domain" x="430" y="650" width="300" height="166" rx="8"/>
+    <rect class="header-domain" x="430" y="650" width="300" height="36" rx="8"/>
+    <rect class="header-domain" x="430" y="676" width="300" height="10"/>
+    <text class="title" x="446" y="673">student_preferences</text>
+    <text class="field" x="446" y="708">PK id</text>
+    <text class="field" x="446" y="728">FK student_id</text>
+    <text class="field" x="446" y="748">FK registration_session_track_id</text>
+    <text class="field" x="446" y="768">priority</text>
+    <text class="field" x="446" y="788">created_at, updated_at</text>
+  </g>
+
+  <!-- Placements -->
+  <g id="placements">
+    <rect class="entity-domain" x="820" y="660" width="300" height="266" rx="8"/>
+    <rect class="header-domain" x="820" y="660" width="300" height="36" rx="8"/>
+    <rect class="header-domain" x="820" y="686" width="300" height="10"/>
+    <text class="title" x="836" y="683">placements</text>
+    <text class="field" x="836" y="718">PK id</text>
+    <text class="field" x="836" y="738">FK student_id</text>
+    <text class="field" x="836" y="758">FK assigned_class_id nullable</text>
+    <text class="field" x="836" y="778">placement_status</text>
+    <text class="field" x="836" y="798">placement_notes</text>
+    <text class="field" x="836" y="818">track_priority</text>
+    <text class="field" x="836" y="838">assigned_by</text>
+    <text class="field" x="836" y="858">FK admin_id nullable</text>
+    <text class="field" x="836" y="878">assigned_at</text>
+    <text class="field" x="836" y="898">is_active</text>
+  </g>
+
+  <!-- Placement logs -->
+  <g id="placement-logs">
+    <rect class="entity-domain" x="1230" y="620" width="310" height="286" rx="8"/>
+    <rect class="header-domain" x="1230" y="620" width="310" height="36" rx="8"/>
+    <rect class="header-domain" x="1230" y="646" width="310" height="10"/>
+    <text class="title" x="1246" y="643">placement_logs</text>
+    <text class="field" x="1246" y="678">PK id</text>
+    <text class="field" x="1246" y="698">FK placement_id nullable</text>
+    <text class="field" x="1246" y="718">FK registration_session_id</text>
+    <text class="field" x="1246" y="738">FK student_id nullable</text>
+    <text class="field" x="1246" y="758">FK class_id nullable</text>
+    <text class="field" x="1246" y="778">FK previous_class_id nullable</text>
+    <text class="field" x="1246" y="798">track_priority</text>
+    <text class="field" x="1246" y="818">action</text>
+    <text class="field" x="1246" y="838">FK performed_by_user_id nullable</text>
+    <text class="field" x="1246" y="858">notes</text>
+    <text class="field" x="1246" y="878">balance_metrics, created_at</text>
+  </g>
+
+  <!-- Users -->
+  <g id="users">
+    <rect class="entity-auth" x="1230" y="150" width="260" height="206" rx="8"/>
+    <rect class="header-auth" x="1230" y="150" width="260" height="36" rx="8"/>
+    <rect class="header-auth" x="1230" y="176" width="260" height="10"/>
+    <text class="title" x="1246" y="173">users</text>
+    <text class="field" x="1246" y="208">PK id</text>
+    <text class="field" x="1246" y="228">name</text>
+    <text class="field" x="1246" y="248">UK email</text>
+    <text class="field" x="1246" y="268">email_verified_at</text>
+    <text class="field" x="1246" y="288">password</text>
+    <text class="field" x="1246" y="308">remember_token</text>
+    <text class="field" x="1246" y="328">created_at, updated_at</text>
+  </g>
+
+  <!-- Roles -->
+  <g id="roles">
+    <rect class="entity-auth" x="1220" y="70" width="170" height="46" rx="8"/>
+    <rect class="header-auth" x="1220" y="70" width="170" height="28" rx="8"/>
+    <text class="title" x="1234" y="90">roles</text>
+    <text class="muted" x="1234" y="108">name, guard_name</text>
+  </g>
+
+  <!-- Permissions -->
+  <g id="permissions">
+    <rect class="entity-auth" x="1410" y="70" width="170" height="46" rx="8"/>
+    <rect class="header-auth" x="1410" y="70" width="170" height="28" rx="8"/>
+    <text class="title" x="1424" y="90">permissions</text>
+    <text class="muted" x="1424" y="108">name, guard_name</text>
+  </g>
+
+  <!-- Lookup tables -->
+  <g id="races">
+    <rect class="entity" x="60" y="880" width="220" height="126" rx="8"/>
+    <rect class="header" x="60" y="880" width="220" height="34" rx="8"/>
+    <rect class="header" x="60" y="904" width="220" height="10"/>
+    <text class="title" x="76" y="902">races</text>
+    <text class="field" x="76" y="936">PK id</text>
+    <text class="field" x="76" y="956">name</text>
+    <text class="field" x="76" y="976">UK code</text>
+    <text class="field" x="76" y="996">is_active</text>
+  </g>
+
+  <g id="religions">
+    <rect class="entity" x="310" y="880" width="220" height="126" rx="8"/>
+    <rect class="header" x="310" y="880" width="220" height="34" rx="8"/>
+    <rect class="header" x="310" y="904" width="220" height="10"/>
+    <text class="title" x="326" y="902">religions</text>
+    <text class="field" x="326" y="936">PK id</text>
+    <text class="field" x="326" y="956">name</text>
+    <text class="field" x="326" y="976">UK code</text>
+    <text class="field" x="326" y="996">is_active</text>
+  </g>
+
+  <!-- Relationships -->
+  <path class="relationship" d="M 330 245 L 430 245"/>
+  <text class="label" x="350" y="234">1 to many via session tracks</text>
+  <text class="label" x="338" y="262">1</text>
+  <text class="label" x="410" y="262">*</text>
+
+  <path class="relationship" d="M 550 286 L 550 380"/>
+  <text class="label" x="562" y="335">track reused</text>
+  <text class="label" x="558" y="304">1</text>
+  <text class="label" x="558" y="372">*</text>
+
+  <path class="relationship" d="M 330 350 L 430 420"/>
+  <text class="label" x="346" y="392">session offers</text>
+
+  <path class="relationship" d="M 330 570 L 430 510"/>
+  <text class="label" x="344" y="548">session students</text>
+
+  <path class="relationship" d="M 730 475 L 820 475"/>
+  <text class="label" x="752" y="464">has classes</text>
+  <text class="label" x="738" y="492">1</text>
+  <text class="label" x="802" y="492">*</text>
+
+  <path class="relationship" d="M 350 700 L 430 735"/>
+  <text class="label" x="354" y="728">ranks</text>
+
+  <path class="relationship" d="M 580 566 L 580 650"/>
+  <text class="label" x="592" y="616">selected track</text>
+
+  <path class="relationship" d="M 350 720 L 820 740"/>
+  <text class="label" x="500" y="715">student placements</text>
+
+  <path class="relationship" d="M 970 586 L 970 660"/>
+  <text class="label" x="982" y="626">assigned class</text>
+
+  <path class="relationship" d="M 1120 770 L 1230 750"/>
+  <text class="label" x="1138" y="748">placement audit</text>
+
+  <path class="relationship" d="M 350 650 L 1230 735"/>
+  <text class="label" x="620" y="680">student audit</text>
+
+  <path class="relationship" d="M 330 330 L 1230 710"/>
+  <text class="label" x="740" y="345">session audit</text>
+
+  <path class="relationship" d="M 1090 520 L 1230 765"/>
+  <text class="label" x="1120" y="622">current or previous class</text>
+
+  <path class="relationship" d="M 1230 290 L 1120 850"/>
+  <text class="label" x="1130" y="300">admin placement</text>
+
+  <path class="relationship" d="M 1360 356 L 1360 620"/>
+  <text class="label" x="1372" y="488">performed by</text>
+
+  <path class="relationship-weak" d="M 1285 116 L 1310 150"/>
+  <path class="relationship-weak" d="M 1430 116 L 1390 150"/>
+  <path class="relationship-weak" d="M 1390 93 L 1410 93"/>
+  <text class="label" x="1300" y="134">Spatie pivots</text>
+
+  <path class="relationship-weak" d="M 170 880 L 170 746"/>
+  <text class="label" x="182" y="826">stored as text</text>
+
+  <path class="relationship-weak" d="M 420 880 L 265 746"/>
+  <text class="label" x="330" y="846">stored as text</text>
+
+  <!-- Notes -->
+  <g id="legend">
+    <rect class="entity" x="820" y="1000" width="720" height="118" rx="8"/>
+    <text class="note" x="846" y="1032">Key constraints: students are unique by session + matric number and session + identification number.</text>
+    <text class="note" x="846" y="1056">Student preferences are unique by student + session track and by student + priority.</text>
+    <text class="note" x="846" y="1080">Placements use a unique student + is_active pair to keep one active placement per student.</text>
+    <text class="note" x="846" y="1104">Deleting a session cascades to session tracks, students, and placement logs; deleted classes/users are nulled on placement audit links.</text>
+  </g>
+</svg>

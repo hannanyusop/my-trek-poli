@@ -5,8 +5,7 @@
             "args": [
                 "artisan",
                 "boost:mcp"
-            ],
-            "cwd": "/Users/sirhannan/www/mytrek"
+            ]
         }
     }
 }
