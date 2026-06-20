@@ -41,26 +41,7 @@ test('registration session defaults to global balance placement algorithm', func
     ]);
 });
 
-test('admin can update placement algorithm before placement starts', function () {
-    $this->withoutMiddleware(ValidateCsrfToken::class);
-
-    $user = User::factory()->create();
-    $session = RegistrationSession::factory()->closed()->create([
-        'placement_algorithm' => PlacementAlgorithm::GlobalBalance->value,
-    ]);
-
-    $response = $this->actingAs($user)->put(
-        route('admin.registration-sessions.update-placement-algorithm', $session->id),
-        ['placement_algorithm' => PlacementAlgorithm::GlobalBalance->value]
-    );
-
-    $response->assertRedirect();
-    $response->assertSessionHas('success');
-
-    expect($session->fresh()->placement_algorithm)->toBe(PlacementAlgorithm::GlobalBalance->value);
-});
-
-test('admin cannot update placement algorithm after placement starts', function () {
+test('admin can update placement algorithm before results are published', function () {
     $this->withoutMiddleware(ValidateCsrfToken::class);
 
     $user = User::factory()->create();
@@ -71,10 +52,32 @@ test('admin cannot update placement algorithm after placement starts', function 
 
     $response = $this->actingAs($user)->put(
         route('admin.registration-sessions.update-placement-algorithm', $session->id),
-        ['placement_algorithm' => PlacementAlgorithm::GlobalBalance->value]
+        ['placement_algorithm' => PlacementAlgorithm::FcfsPreferenceBalance->value]
+    );
+
+    $response->assertRedirect();
+    $response->assertSessionHas('success');
+
+    expect($session->fresh()->placement_algorithm)->toBe(PlacementAlgorithm::FcfsPreferenceBalance->value);
+});
+
+test('admin cannot update placement algorithm after results are published', function () {
+    $this->withoutMiddleware(ValidateCsrfToken::class);
+
+    $user = User::factory()->create();
+    $session = RegistrationSession::factory()->create([
+        'status' => RegistrationSessionStatus::Published,
+        'placement_algorithm' => PlacementAlgorithm::GlobalBalance->value,
+    ]);
+
+    $response = $this->actingAs($user)->put(
+        route('admin.registration-sessions.update-placement-algorithm', $session->id),
+        ['placement_algorithm' => PlacementAlgorithm::FcfsPreferenceBalance->value]
     );
 
     $response->assertSessionHasErrors('status');
+
+    expect($session->fresh()->placement_algorithm)->toBe(PlacementAlgorithm::GlobalBalance->value);
 });
 
 test('admin cannot save unsupported placement algorithm', function () {

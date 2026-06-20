@@ -33,7 +33,7 @@ export default function Show({ session, classes, students, availableTracks, regi
 
     // Check if class management is allowed (before placement)
     const canManageClasses = ['draft', 'open', 'closed'].includes(session.status);
-    const canChangePlacementAlgorithm = ['draft', 'open', 'closed'].includes(session.status);
+    const canChangePlacementAlgorithm = session.status !== 'published';
     const selectedPlacementAlgorithm = placementAlgorithms.find(
         (algorithm) => algorithm.key === (session.placement_algorithm || 'global_balance')
     );
@@ -220,6 +220,25 @@ export default function Show({ session, classes, students, availableTracks, regi
                 }, {
                     preserveScroll: true,
                     onSuccess: () => {
+                        if (session.status === 'placement') {
+                            Swal.fire({
+                                title: 'Algorithm Updated',
+                                text: 'Rerun placement now using the selected algorithm?',
+                                icon: 'success',
+                                showCancelButton: true,
+                                confirmButtonColor: '#7c3aed',
+                                cancelButtonColor: '#6b7280',
+                                confirmButtonText: 'Rerun Placement',
+                                cancelButtonText: 'Later'
+                            }).then((rerunResult) => {
+                                if (rerunResult.isConfirmed) {
+                                    handleRegeneratePlacement();
+                                }
+                            });
+
+                            return;
+                        }
+
                         Swal.fire({
                             title: 'Updated!',
                             text: 'Placement algorithm has been updated.',
@@ -236,6 +255,41 @@ export default function Show({ session, classes, students, availableTracks, regi
                             icon: 'error'
                         });
                     }
+                });
+            }
+        });
+    };
+
+    const handleRegeneratePlacement = () => {
+        Swal.fire({
+            title: 'Rerunning...',
+            text: 'Clearing existing placements and running the selected algorithm. Please wait...',
+            icon: 'info',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        router.post(route('admin.registration-sessions.placement.regenerate', session.id), {}, {
+            preserveScroll: true,
+            onSuccess: () => {
+                Swal.fire({
+                    title: 'Placement Rerun Complete',
+                    text: 'Placements have been regenerated using the selected algorithm.',
+                    icon: 'success',
+                    timer: 3000,
+                    showConfirmButton: false
+                });
+            },
+            onError: (errors) => {
+                const errorMessage = Object.values(errors).flat().join(' ');
+                Swal.fire({
+                    title: 'Error!',
+                    text: errorMessage || 'Failed to rerun placement. Please try again.',
+                    icon: 'error'
                 });
             }
         });
@@ -835,7 +889,7 @@ export default function Show({ session, classes, students, availableTracks, regi
                                                     )}
                                                     {!canChangePlacementAlgorithm && (
                                                         <p className="text-xs text-amber-600 dark:text-amber-400">
-                                                            Algorithm is locked after placement starts.
+                                                            Algorithm is locked after results are published.
                                                         </p>
                                                     )}
                                                 </div>

@@ -62,12 +62,6 @@ export default function CreateRegistrationSession({ tracks }: CreateRegistration
     };
 
     const handleNext = () => {
-        console.log('=== HANDLE NEXT DEBUG ===');
-        console.log('Current step:', currentStep);
-        console.log('Selected tracks (local):', selectedTracks);
-        console.log('Form tracks (data):', data.tracks);
-        console.log('ValidateStep2 result:', validateStep2());
-        console.log('=== END HANDLE NEXT DEBUG ===');
 
         if (currentStep < 3) {
             // Validate current step before proceeding
@@ -93,10 +87,6 @@ export default function CreateRegistrationSession({ tracks }: CreateRegistration
     };
 
     const handleTrackToggle = (trackId: number) => {
-        console.log('=== TRACK TOGGLE DEBUG ===');
-        console.log('Track ID being toggled:', trackId);
-        console.log('Current selectedTracks before toggle:', selectedTracks);
-        console.log('Current data.tracks before toggle:', data.tracks);
 
         setSelectedTracks(prev => {
             const updated = prev.includes(trackId)
@@ -130,8 +120,6 @@ export default function CreateRegistrationSession({ tracks }: CreateRegistration
                     return updatedClasses;
                 });
             }
-
-            console.log('=== END TRACK TOGGLE DEBUG ===');
             return updated;
         });
     };
@@ -183,15 +171,6 @@ export default function CreateRegistrationSession({ tracks }: CreateRegistration
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Debug current state
-        console.log('=== FORM SUBMISSION DEBUG ===');
-        console.log('Form data:', data);
-        console.log('Start date state:', startDate);
-        console.log('End date state:', endDate);
-        console.log('Selected tracks state:', selectedTracks);
-        console.log('Classes state:', classes);
-        console.log('=== END DEBUG ===');
-
         // Validate that we have all required data before submitting
         if (!data.name.trim()) {
             toast.error('Please enter a session name');
@@ -209,9 +188,6 @@ export default function CreateRegistrationSession({ tracks }: CreateRegistration
             toast.error('Please select at least one track');
             return;
         }
-
-        // Debug log to see what data we're sending
-        console.log('Submitting form data:', data);
 
         post(route('admin.registration-sessions.store'), {
             onSuccess: () => {
@@ -567,12 +543,6 @@ export default function CreateRegistrationSession({ tracks }: CreateRegistration
 
                                     {currentStep < 3 ? (
                                         <div className="flex flex-col items-end gap-2">
-                                            {/* Debug info */}
-                                            {currentStep === 2 && (
-                                                <div className="text-xs text-gray-500">
-                                                    Debug: selectedTracks={selectedTracks.length}, data.tracks={data.tracks?.length || 0}, validation={validateStep2() ? 'PASS' : 'FAIL'}
-                                                </div>
-                                            )}
                                             <button
                                                 type="button"
                                                 onClick={handleNext}

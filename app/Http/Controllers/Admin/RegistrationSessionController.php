@@ -930,12 +930,8 @@ class RegistrationSessionController extends Controller
     {
         $session = RegistrationSession::findOrFail($id);
 
-        if (! in_array($session->status, [
-            \App\Enums\RegistrationSessionStatus::Draft,
-            \App\Enums\RegistrationSessionStatus::Open,
-            \App\Enums\RegistrationSessionStatus::Closed,
-        ])) {
-            return back()->withErrors(['status' => 'Placement algorithm can only be changed before placement starts.']);
+        if ($session->status === \App\Enums\RegistrationSessionStatus::Published) {
+            return back()->withErrors(['status' => 'Placement algorithm cannot be changed after results have been published.']);
         }
 
         $validated = $request->validate([
