@@ -60,6 +60,7 @@ class PlacementService
             return match ($algorithm) {
                 PlacementAlgorithm::GlobalBalance => $this->processGlobalBalanceSession($session),
                 PlacementAlgorithm::FcfsPreferenceBalance => $this->processFcfsPreferenceBalanceSession($session),
+                PlacementAlgorithm::PreferenceBalancedOptimization => $this->processPreferenceBalancedOptimizationSession($session),
             };
 
         } catch (\Exception $e) {
@@ -209,6 +210,360 @@ class PlacementService
                 'message' => 'Placement failed: '.$e->getMessage(),
             ];
         }
+    }
+
+    private function processPreferenceBalancedOptimizationSession(RegistrationSession $session): array
+    {
+        $sessionId = $session->id;
+
+        try {
+            $students = Student::where('registration_session_id', $sessionId)
+                ->where('is_submitted', true)
+                ->orderBy('matric_number', 'asc')
+                ->orderBy('id', 'asc')
+                ->with([
+                    'preferences' => fn ($query) => $query->orderBy('priority', 'asc'),
+                    'preferences.registrationSessionTrack',
+                ])
+                ->get();
+
+            $totalStudents = $students->count();
+
+            if ($totalStudents === 0) {
+                DB::commit();
+
+                return [
+                    'success' => true,
+                    'placed' => 0,
+                    'flagged' => 0,
+                    'total' => 0,
+                    'message' => 'No students to process.',
+                ];
+            }
+
+            $tracks = $this->getTrackCapacities($sessionId);
+
+            if ($tracks->isEmpty()) {
+                foreach ($students as $student) {
+                    $this->flagStudent($student, 'No active tracks with class capacity', $sessionId);
+                }
+
+                DB::commit();
+                Cache::forget("placement_progress_{$sessionId}");
+
+                return [
+                    'success' => true,
+                    'placed' => 0,
+                    'flagged' => $this->totalFlagged,
+                    'total' => $totalStudents,
+                    'message' => "Placement complete using {$this->currentAlgorithm}. 0 placed, {$this->totalFlagged} flagged for review.",
+                ];
+            }
+
+            $this->calculateTargetProportions($students);
+            $this->initializeClassDistributions($sessionId, $totalStudents);
+
+            $assignments = $this->buildInitialTrackAssignments($students, $tracks->toArray(), $sessionId);
+            $assignments = $this->optimizeTrackAssignments($students, $assignments, $tracks->toArray());
+
+            foreach ($students as $student) {
+                $this->updateProgress($sessionId, ++$this->totalProcessed, $totalStudents);
+
+                $assignment = $assignments[$student->id] ?? null;
+
+                if (! $assignment) {
+                    continue;
+                }
+
+                $bestClass = $this->selectBestClassInTrack($assignment['track_id'], $student);
+
+                if (! $bestClass) {
+                    $this->flagStudent($student, 'No class capacity available in assigned track', $sessionId);
+
+                    continue;
+                }
+
+                $this->assignStudentToClass($student, $bestClass, $assignment['priority'], $sessionId);
+                $this->totalPlaced++;
+            }
+
+            DB::commit();
+            Cache::forget("placement_progress_{$sessionId}");
+
+            return [
+                'success' => true,
+                'placed' => $this->totalPlaced,
+                'flagged' => $this->totalFlagged,
+                'total' => $totalStudents,
+                'message' => "Placement complete using {$this->currentAlgorithm}. {$this->totalPlaced} placed, {$this->totalFlagged} flagged for review.",
+            ];
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Placement processing error', [
+                'session_id' => $sessionId,
+                'algorithm' => $this->currentAlgorithm,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Placement failed: '.$e->getMessage(),
+            ];
+        }
+    }
+
+    private function getTrackCapacities(int $sessionId): Collection
+    {
+        return Classes::whereHas('registrationSessionTrack', function ($query) use ($sessionId) {
+            $query->where('registration_session_id', $sessionId);
+        })
+            ->where('is_active', true)
+            ->with('registrationSessionTrack')
+            ->get()
+            ->groupBy('registration_session_track_id')
+            ->map(fn (Collection $classes, int $trackId) => [
+                'track_id' => $trackId,
+                'capacity' => $classes->sum('quota'),
+                'assigned' => 0,
+            ])
+            ->filter(fn (array $track) => $track['capacity'] > 0)
+            ->sortKeys()
+            ->values()
+            ->keyBy('track_id');
+    }
+
+    private function buildInitialTrackAssignments(Collection $students, array $tracks, int $sessionId): array
+    {
+        $assignments = [];
+        $trackCounts = array_map(fn (array $track) => $track['assigned'], $tracks);
+        $studentsById = $students->keyBy('id');
+
+        for ($priority = 1; $priority <= 3; $priority++) {
+            foreach ($students as $student) {
+                if (isset($assignments[$student->id])) {
+                    continue;
+                }
+
+                $preference = $student->preferences
+                    ->first(fn ($item) => $item->priority === $priority && $item->registrationSessionTrack !== null);
+
+                if (! $preference) {
+                    continue;
+                }
+
+                $trackId = $preference->registration_session_track_id;
+
+                if (! isset($tracks[$trackId])) {
+                    continue;
+                }
+
+                if (($trackCounts[$trackId] ?? 0) >= $tracks[$trackId]['capacity']) {
+                    continue;
+                }
+
+                $assignments[$student->id] = [
+                    'student_id' => $student->id,
+                    'track_id' => $trackId,
+                    'priority' => $priority,
+                    'preference_score' => $this->preferenceScore($priority),
+                ];
+                $trackCounts[$trackId]++;
+            }
+        }
+
+        foreach ($studentsById as $student) {
+            if (! isset($assignments[$student->id])) {
+                $this->flagStudent($student, 'All preferred tracks are full or unavailable', $sessionId);
+            }
+        }
+
+        return $assignments;
+    }
+
+    private function optimizeTrackAssignments(Collection $students, array $assignments, array $tracks): array
+    {
+        $studentsById = $students->keyBy('id');
+        $maxIterations = max(1, count($assignments) * count($assignments));
+        $iteration = 0;
+
+        do {
+            $improved = false;
+            $currentScore = $this->getSystemTrackScore($studentsById, $assignments, $tracks);
+            $currentGenderDeviation = $this->getTrackBalanceDeviation($studentsById, $assignments, 'gender');
+            $currentRaceDeviation = $this->getTrackBalanceDeviation($studentsById, $assignments, 'race');
+            $studentIds = collect(array_keys($assignments))->sort()->values()->all();
+
+            foreach ($studentIds as $leftId) {
+                foreach ($studentIds as $rightId) {
+                    if ($leftId >= $rightId) {
+                        continue;
+                    }
+
+                    if ($assignments[$leftId]['track_id'] === $assignments[$rightId]['track_id']) {
+                        continue;
+                    }
+
+                    $leftStudent = $studentsById[$leftId] ?? null;
+                    $rightStudent = $studentsById[$rightId] ?? null;
+
+                    if (! $leftStudent || ! $rightStudent) {
+                        continue;
+                    }
+
+                    $leftNewPriority = $this->priorityForTrack($leftStudent, $assignments[$rightId]['track_id']);
+                    $rightNewPriority = $this->priorityForTrack($rightStudent, $assignments[$leftId]['track_id']);
+
+                    if ($leftNewPriority === null || $rightNewPriority === null) {
+                        continue;
+                    }
+
+                    $newPreferenceTotal = $this->preferenceScore($leftNewPriority) + $this->preferenceScore($rightNewPriority);
+                    $oldPreferenceTotal = $assignments[$leftId]['preference_score'] + $assignments[$rightId]['preference_score'];
+
+                    if (($oldPreferenceTotal - $newPreferenceTotal) > 80) {
+                        continue;
+                    }
+
+                    $candidate = $assignments;
+                    $candidate[$leftId] = [
+                        ...$candidate[$leftId],
+                        'track_id' => $assignments[$rightId]['track_id'],
+                        'priority' => $leftNewPriority,
+                        'preference_score' => $this->preferenceScore($leftNewPriority),
+                    ];
+                    $candidate[$rightId] = [
+                        ...$candidate[$rightId],
+                        'track_id' => $assignments[$leftId]['track_id'],
+                        'priority' => $rightNewPriority,
+                        'preference_score' => $this->preferenceScore($rightNewPriority),
+                    ];
+
+                    $candidateGenderDeviation = $this->getTrackBalanceDeviation($studentsById, $candidate, 'gender');
+                    $candidateRaceDeviation = $this->getTrackBalanceDeviation($studentsById, $candidate, 'race');
+
+                    if ($candidateGenderDeviation > $currentGenderDeviation + 0.000001) {
+                        continue;
+                    }
+
+                    if ($candidateRaceDeviation > $currentRaceDeviation + 0.000001) {
+                        continue;
+                    }
+
+                    $candidateScore = $this->getSystemTrackScore($studentsById, $candidate, $tracks);
+
+                    if ($candidateScore <= $currentScore + 0.000001) {
+                        continue;
+                    }
+
+                    $assignments = $candidate;
+                    $improved = true;
+                    break 2;
+                }
+            }
+
+            $iteration++;
+        } while ($improved && $iteration < $maxIterations);
+
+        return $assignments;
+    }
+
+    private function selectBestClassInTrack(int $trackId, Student $student): ?Classes
+    {
+        $classes = Classes::where('registration_session_track_id', $trackId)
+            ->where('is_active', true)
+            ->with('registrationSessionTrack')
+            ->orderBy('id', 'asc')
+            ->get()
+            ->filter(function ($class) {
+                $assignedCount = $this->classDistributions[$class->id]['count'] ?? 0;
+
+                return $assignedCount < $class->quota;
+            });
+
+        if ($classes->isEmpty()) {
+            return null;
+        }
+
+        return $this->selectBestBalancedClass($classes, $student);
+    }
+
+    private function getSystemTrackScore(Collection $studentsById, array $assignments, array $tracks): float
+    {
+        $preferenceTotal = collect($assignments)->sum('preference_score');
+        $genderScore = $this->balanceScoreFromDeviation($this->getTrackBalanceDeviation($studentsById, $assignments, 'gender'), $tracks);
+        $raceScore = $this->balanceScoreFromDeviation($this->getTrackBalanceDeviation($studentsById, $assignments, 'race'), $tracks);
+        $assignedCount = max(1, count($assignments));
+
+        return (($preferenceTotal / $assignedCount) * 0.80) + ($genderScore * 0.10) + ($raceScore * 0.10);
+    }
+
+    private function balanceScoreFromDeviation(float $deviation, array $tracks): float
+    {
+        $capacity = max(1, collect($tracks)->sum('capacity'));
+        $normalized = min(1, $deviation / $capacity);
+
+        return (1 - $normalized) * 100;
+    }
+
+    private function getTrackBalanceDeviation(Collection $studentsById, array $assignments, string $attribute): float
+    {
+        $totalAssigned = count($assignments);
+
+        if ($totalAssigned === 0) {
+            return 0.0;
+        }
+
+        $globalCounts = [];
+        $trackCounts = [];
+
+        foreach ($assignments as $assignment) {
+            $student = $studentsById[$assignment['student_id']] ?? null;
+
+            if (! $student) {
+                continue;
+            }
+
+            $value = $student->{$attribute} ?: 'Unknown';
+            $trackId = $assignment['track_id'];
+
+            $globalCounts[$value] = ($globalCounts[$value] ?? 0) + 1;
+            $trackCounts[$trackId]['total'] = ($trackCounts[$trackId]['total'] ?? 0) + 1;
+            $trackCounts[$trackId]['values'][$value] = ($trackCounts[$trackId]['values'][$value] ?? 0) + 1;
+        }
+
+        $deviation = 0.0;
+
+        foreach ($trackCounts as $track) {
+            $trackTotal = $track['total'];
+
+            foreach ($globalCounts as $value => $globalCount) {
+                $target = ($globalCount / $totalAssigned) * $trackTotal;
+                $actual = $track['values'][$value] ?? 0;
+                $deviation += abs($actual - $target);
+            }
+        }
+
+        return $deviation;
+    }
+
+    private function priorityForTrack(Student $student, int $trackId): ?int
+    {
+        $preference = $student->preferences
+            ->first(fn ($item) => $item->registration_session_track_id === $trackId);
+
+        return $preference?->priority;
+    }
+
+    private function preferenceScore(?int $priority): int
+    {
+        return match ($priority) {
+            1 => 100,
+            2 => 60,
+            3 => 30,
+            default => 0,
+        };
     }
 
     private function processStudent(Student $student, int $sessionId): void

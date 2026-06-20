@@ -6,12 +6,14 @@ enum PlacementAlgorithm: string
 {
     case GlobalBalance = 'global_balance';
     case FcfsPreferenceBalance = 'fcfs_preference_balance';
+    case PreferenceBalancedOptimization = 'preference_balanced_optimization';
 
     public function label(): string
     {
         return match ($this) {
             self::GlobalBalance => 'Global Balance',
             self::FcfsPreferenceBalance => 'FCFS Preference Balance',
+            self::PreferenceBalancedOptimization => 'Preference Balanced Optimization',
         };
     }
 
@@ -20,6 +22,7 @@ enum PlacementAlgorithm: string
         return match ($this) {
             self::GlobalBalance => 'Distributes students across all active classes by quota, gender balance, and race balance.',
             self::FcfsPreferenceBalance => 'Processes earlier submissions first, tries 1st then 2nd then 3rd choice, and balances gender/race within the selected track.',
+            self::PreferenceBalancedOptimization => 'Deterministically prioritizes student preferences, respects track capacity, then optimizes gender and race balance without first-come-first-served ordering.',
         };
     }
 
