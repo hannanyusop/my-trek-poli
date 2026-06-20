@@ -25,6 +25,7 @@ RUN apt-get update \
         libpng-dev \
         libpq-dev \
         libzip-dev \
+        supervisor \
         unzip \
         zip \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
@@ -52,7 +53,8 @@ RUN composer install \
     && chmod -R ug+rwX storage bootstrap/cache
 
 COPY docker/entrypoint.sh /usr/local/bin/laravel-entrypoint
+COPY docker/supervisord.conf /etc/supervisor/conf.d/laravel.conf
 RUN chmod +x /usr/local/bin/laravel-entrypoint
 
 ENTRYPOINT ["laravel-entrypoint"]
-CMD ["apache2-foreground"]
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/laravel.conf"]
