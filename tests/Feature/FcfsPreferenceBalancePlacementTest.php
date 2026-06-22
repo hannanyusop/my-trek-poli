@@ -156,3 +156,64 @@ test('fcfs preference balance flags student when all preferred tracks are full',
     expect($secondPlacement->placement_status)->toBe('flagged');
     expect($secondPlacement->placement_notes)->toBe('All preferred tracks are full or unavailable');
 });
+
+test('fcfs preference balance keeps class totals balanced inside the selected priority track', function () {
+    $session = RegistrationSession::factory()->create([
+        'placement_algorithm' => PlacementAlgorithm::FcfsPreferenceBalance->value,
+    ]);
+
+    $track = createTrack('Track A');
+    $sessionTrack = $session->tracks()->create([
+        'track_id' => $track->id,
+        'name' => $track->name,
+        'description' => $track->description,
+    ]);
+
+    $classA = $sessionTrack->classes()->create([
+        'name' => 'A1',
+        'quota' => 10,
+        'current_count' => 0,
+        'is_active' => true,
+    ]);
+    $classB = $sessionTrack->classes()->create([
+        'name' => 'A2',
+        'quota' => 10,
+        'current_count' => 0,
+        'is_active' => true,
+    ]);
+
+    foreach (range(1, 6) as $index) {
+        $student = Student::create([
+            'registration_session_id' => $session->id,
+            'matric_number' => sprintf('S%03d', $index),
+            'identification_number' => sprintf('ID%03d', $index),
+            'name' => "Student {$index}",
+            'gender' => $index === 1 ? 'female' : 'male',
+            'race' => $index === 1 ? 'Race B' : 'Race A',
+            'religion' => 'Religion A',
+            'email' => "student{$index}@example.com",
+            'phone' => '0100000000',
+            'submitted_at' => now()->addSeconds($index),
+            'is_submitted' => true,
+        ]);
+
+        $student->preferences()->create([
+            'registration_session_track_id' => $sessionTrack->id,
+            'priority' => 1,
+        ]);
+    }
+
+    $result = app(PlacementService::class)->processSession($session->id);
+
+    expect($result['success'])->toBeTrue();
+    expect($result['placed'])->toBe(6);
+
+    $classCounts = Placement::where('is_active', true)
+        ->whereIn('assigned_class_id', [$classA->id, $classB->id])
+        ->selectRaw('assigned_class_id, count(*) as total')
+        ->groupBy('assigned_class_id')
+        ->pluck('total', 'assigned_class_id');
+
+    expect($classCounts[$classA->id])->toBe(3);
+    expect($classCounts[$classB->id])->toBe(3);
+});

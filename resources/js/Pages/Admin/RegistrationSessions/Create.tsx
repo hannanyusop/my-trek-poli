@@ -30,6 +30,43 @@ interface CreateRegistrationSessionProps {
     tracks: Track[];
 }
 
+const DEFAULT_CLASS_QUOTA = 35;
+
+const classNameFromIndex = (index: number): string => {
+    let name = '';
+    let value = index + 1;
+
+    while (value > 0) {
+        value--;
+        name = String.fromCharCode(65 + (value % 26)) + name;
+        value = Math.floor(value / 26);
+    }
+
+    return name;
+};
+
+const classNameToIndex = (name: string): number | null => {
+    const normalized = name.trim().toUpperCase();
+
+    if (!/^[A-Z]+$/.test(normalized)) {
+        return null;
+    }
+
+    return normalized.split('').reduce((total, letter) => {
+        return (total * 26) + (letter.charCodeAt(0) - 64);
+    }, 0) - 1;
+};
+
+const nextClassName = (existingClasses: ClassItem[]): string => {
+    const highestGeneratedIndex = existingClasses.reduce((highest, classItem) => {
+        const index = classNameToIndex(classItem.name);
+
+        return index === null ? highest : Math.max(highest, index);
+    }, -1);
+
+    return classNameFromIndex(Math.max(highestGeneratedIndex + 1, existingClasses.length));
+};
+
 export default function CreateRegistrationSession({ tracks }: CreateRegistrationSessionProps) {
     const [currentStep, setCurrentStep] = useState(1);
     const [selectedTracks, setSelectedTracks] = useState<number[]>([]);
@@ -125,10 +162,11 @@ export default function CreateRegistrationSession({ tracks }: CreateRegistration
     };
 
     const addClass = (trackId: number) => {
+        const existingClasses = classes[trackId] || [];
         const newClass: ClassItem = {
             id: `class_${Date.now()}_${Math.random()}`,
-            name: '',
-            quota: 0
+            name: nextClassName(existingClasses),
+            quota: DEFAULT_CLASS_QUOTA
         };
 
         setClasses(prev => {

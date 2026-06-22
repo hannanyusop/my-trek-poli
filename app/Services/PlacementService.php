@@ -634,7 +634,7 @@ class PlacementService
                 continue;
             }
 
-            $bestClass = $this->selectBestBalancedClass($classes, $student);
+            $bestClass = $this->selectBestClassBySizeThenBalance($classes, $student);
 
             if ($bestClass) {
                 $this->assignStudentToClass($student, $bestClass, $preference->priority, $sessionId);
@@ -658,6 +658,30 @@ class PlacementService
             if ($score < $bestScore || ($score === $bestScore && $bestClass && $class->id < $bestClass->id)) {
                 $bestScore = $score;
                 $bestClass = $class;
+            }
+        }
+
+        return $bestClass;
+    }
+
+    private function selectBestClassBySizeThenBalance(Collection $classes, Student $student): ?Classes
+    {
+        $bestClass = null;
+        $bestCount = PHP_INT_MAX;
+        $bestScore = PHP_FLOAT_MAX;
+
+        foreach ($classes as $class) {
+            $count = $this->classDistributions[$class->id]['count'] ?? 0;
+            $score = $this->getClassBalanceScore($class, $student);
+
+            if (
+                $count < $bestCount
+                || ($count === $bestCount && $score < $bestScore)
+                || ($count === $bestCount && $score === $bestScore && $bestClass && $class->id < $bestClass->id)
+            ) {
+                $bestClass = $class;
+                $bestCount = $count;
+                $bestScore = $score;
             }
         }
 

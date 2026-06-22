@@ -1,56 +1,49 @@
 <?php
 
 use App\Enums\RegistrationSessionStatus;
+use App\Jobs\ProcessPlacementJob;
 use App\Models\RegistrationSession;
 use App\Models\User;
-use App\Services\PlacementService;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 
 uses(RefreshDatabase::class);
 
-test('admin can regenerate placements before results are published', function () {
+test('admin can queue placement regeneration before results are published', function () {
     $this->withoutMiddleware(ValidateCsrfToken::class);
+    Queue::fake();
 
     $user = User::factory()->create();
     $session = RegistrationSession::factory()->create([
         'status' => RegistrationSessionStatus::Placement,
     ]);
 
-    $placementService = \Mockery::mock(PlacementService::class);
-    $placementService
-        ->shouldReceive('regenerateSession')
-        ->once()
-        ->with($session->id)
-        ->andReturn([
-            'success' => true,
-            'message' => 'Placements regenerated.',
-        ]);
-
-    $this->instance(PlacementService::class, $placementService);
-
     $response = $this->actingAs($user)
         ->post(route('admin.registration-sessions.placement.regenerate', $session->id));
 
     $response->assertRedirect();
-    $response->assertSessionHas('success', 'Placements regenerated.');
+    $response->assertSessionHas('success', 'Placement rerun has been queued. This may take a few minutes.');
+
+    expect($session->fresh()->status)->toBe(RegistrationSessionStatus::Processing);
+
+    Queue::assertPushed(ProcessPlacementJob::class, function (ProcessPlacementJob $job) use ($session) {
+        return $job->sessionId === $session->id && $job->regenerate === true;
+    });
 });
 
 test('admin cannot regenerate placements after results are published', function () {
     $this->withoutMiddleware(ValidateCsrfToken::class);
+    Queue::fake();
 
     $user = User::factory()->create();
     $session = RegistrationSession::factory()->create([
         'status' => RegistrationSessionStatus::Published,
     ]);
 
-    $placementService = \Mockery::mock(PlacementService::class);
-    $placementService->shouldNotReceive('regenerateSession');
-
-    $this->instance(PlacementService::class, $placementService);
-
     $response = $this->actingAs($user)
         ->post(route('admin.registration-sessions.placement.regenerate', $session->id));
 
     $response->assertSessionHasErrors('error');
+    Queue::assertNothingPushed();
 });

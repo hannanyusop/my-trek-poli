@@ -21,7 +21,8 @@ class ProcessPlacementJob implements ShouldQueue
      * Create a new job instance.
      */
     public function __construct(
-        public int $sessionId
+        public int $sessionId,
+        public bool $regenerate = false,
     ) {}
 
     /**
@@ -30,9 +31,14 @@ class ProcessPlacementJob implements ShouldQueue
     public function handle(PlacementService $placementService): void
     {
         try {
-            Log::info('Starting placement processing', ['session_id' => $this->sessionId]);
+            Log::info('Starting placement processing', [
+                'session_id' => $this->sessionId,
+                'regenerate' => $this->regenerate,
+            ]);
 
-            $result = $placementService->processSession($this->sessionId);
+            $result = $this->regenerate
+                ? $placementService->regenerateSession($this->sessionId)
+                : $placementService->processSession($this->sessionId);
 
             if ($result['success']) {
                 // Update session status to placement

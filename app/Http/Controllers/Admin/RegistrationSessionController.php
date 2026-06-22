@@ -603,7 +603,7 @@ class RegistrationSessionController extends Controller
     public function generateDummyStudent(Request $request, string $id)
     {
         $request->validate([
-            'count' => 'nullable|integer|min:1|max:100',
+            'count' => 'nullable|integer|min:1|max:300',
         ]);
 
         $count = $request->input('count', 1);

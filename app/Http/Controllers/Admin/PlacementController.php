@@ -5,13 +5,14 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\RegistrationSessionStatus;
 use App\Exports\PlacementsExport;
 use App\Http\Controllers\Controller;
+use App\Jobs\ProcessPlacementJob;
 use App\Models\Classes;
 use App\Models\Placement;
 use App\Models\PlacementLog;
 use App\Models\RegistrationSession;
 use App\Models\Student;
-use App\Services\PlacementService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -327,7 +328,7 @@ class PlacementController extends Controller
     /**
      * Clear all placements and regenerate them.
      */
-    public function regenerate(string $sessionId, PlacementService $placementService)
+    public function regenerate(string $sessionId)
     {
         $session = RegistrationSession::findOrFail($sessionId);
 
@@ -341,12 +342,19 @@ class PlacementController extends Controller
             return back()->withErrors(['status' => 'Session must be in Placement status to regenerate.']);
         }
 
-        $result = $placementService->regenerateSession($session->id);
+        $hasPendingJob = DB::table('jobs')
+            ->where('payload', 'like', '%ProcessPlacementJob%')
+            ->where('payload', 'like', '%sessionId\\\";i:'.$session->id.';%')
+            ->exists();
 
-        if ($result['success']) {
-            return back()->with('success', $result['message']);
+        if ($hasPendingJob) {
+            return back()->withErrors(['job' => 'A placement job is already pending in the queue. Please wait for it to complete.']);
         }
 
-        return back()->withErrors(['error' => $result['message']]);
+        $session->update(['status' => RegistrationSessionStatus::Processing]);
+
+        ProcessPlacementJob::dispatch($session->id, regenerate: true);
+
+        return back()->with('success', 'Placement rerun has been queued. This may take a few minutes.');
     }
 }

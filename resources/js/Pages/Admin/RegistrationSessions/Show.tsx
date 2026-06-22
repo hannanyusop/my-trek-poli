@@ -232,7 +232,7 @@ export default function Show({ session, classes, students, availableTracks, regi
                                 cancelButtonText: 'Later'
                             }).then((rerunResult) => {
                                 if (rerunResult.isConfirmed) {
-                                    handleRegeneratePlacement();
+                                    handleRegeneratePlacement(false);
                                 }
                             });
 
@@ -260,10 +260,10 @@ export default function Show({ session, classes, students, availableTracks, regi
         });
     };
 
-    const handleRegeneratePlacement = () => {
+    const queueRegeneratePlacement = () => {
         Swal.fire({
-            title: 'Rerunning...',
-            text: 'Clearing existing placements and running the selected algorithm. Please wait...',
+            title: 'Queueing...',
+            text: 'Starting placement rerun. Please wait...',
             icon: 'info',
             allowOutsideClick: false,
             allowEscapeKey: false,
@@ -277,20 +277,49 @@ export default function Show({ session, classes, students, availableTracks, regi
             preserveScroll: true,
             onSuccess: () => {
                 Swal.fire({
-                    title: 'Placement Rerun Complete',
-                    text: 'Placements have been regenerated using the selected algorithm.',
+                    title: 'Rerun Queued',
+                    text: 'Placement rerun has started. The page will refresh when complete.',
                     icon: 'success',
                     timer: 3000,
                     showConfirmButton: false
                 });
+
+                const pollInterval = setInterval(() => {
+                    router.reload({ only: ['session'] });
+                }, 3000);
+
+                setTimeout(() => clearInterval(pollInterval), 300000);
             },
             onError: (errors) => {
                 const errorMessage = Object.values(errors).flat().join(' ');
                 Swal.fire({
                     title: 'Error!',
-                    text: errorMessage || 'Failed to rerun placement. Please try again.',
+                    text: errorMessage || 'Failed to queue placement rerun. Please try again.',
                     icon: 'error'
                 });
+            }
+        });
+    };
+
+    const handleRegeneratePlacement = (confirmBeforeQueue = true) => {
+        if (!confirmBeforeQueue) {
+            queueRegeneratePlacement();
+
+            return;
+        }
+
+        Swal.fire({
+            title: 'Rerun Placement?',
+            text: 'This will clear existing placements and rerun the selected algorithm in the background.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#7c3aed',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Rerun Placement',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                queueRegeneratePlacement();
             }
         });
     };
@@ -308,7 +337,7 @@ export default function Show({ session, classes, students, availableTracks, regi
                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                         value="1"
                         min="1"
-                        max="100"
+                        max="300"
                     />
                 </div>
             `,
@@ -327,8 +356,8 @@ export default function Show({ session, classes, students, availableTracks, regi
                     return false;
                 }
 
-                if (numCount > 100) {
-                    Swal.showValidationMessage('Maximum 100 students at a time');
+                if (numCount > 300) {
+                    Swal.showValidationMessage('Maximum 300 students at a time');
                     return false;
                 }
 
@@ -691,6 +720,16 @@ export default function Show({ session, classes, students, availableTracks, regi
                                         <Monitor className="mr-2 h-4 w-4" />
                                         Projector View
                                     </a>
+
+                                    {session.status === 'placement' && (
+                                        <button
+                                            onClick={() => handleRegeneratePlacement()}
+                                            className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                                        >
+                                            <RotateCcw className="mr-2 h-4 w-4" />
+                                            Rerun Placement
+                                        </button>
+                                    )}
 
                                     {session.status === 'closed' && (
                                         <button

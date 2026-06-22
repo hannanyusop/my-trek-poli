@@ -1,15 +1,16 @@
 <?php
 
-use App\Enums\RegistrationSessionStatus;
 use App\Jobs\ProcessPlacementJob;
 use App\Models\RegistrationSession;
 use App\Models\User;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 
 uses(RefreshDatabase::class);
 
 test('retry placement requires session to be in processing status', function () {
+    $this->withoutMiddleware(ValidateCsrfToken::class);
     Queue::fake();
 
     $user = User::factory()->create();
@@ -23,6 +24,7 @@ test('retry placement requires session to be in processing status', function () 
 });
 
 test('retry placement dispatches job when session is in processing status', function () {
+    $this->withoutMiddleware(ValidateCsrfToken::class);
     Queue::fake();
 
     $user = User::factory()->create();
@@ -39,6 +41,8 @@ test('retry placement dispatches job when session is in processing status', func
 });
 
 test('retry placement prevents duplicate jobs when job already pending', function () {
+    $this->withoutMiddleware(ValidateCsrfToken::class);
+
     $user = User::factory()->create();
     $session = RegistrationSession::factory()->processing()->create();
 
